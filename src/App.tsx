@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
+import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { LandingPage } from '@/components/LandingPage'
 import { WalletConnect } from '@/components/WalletConnect'
 import { SubscriptionForm } from '@/components/SubscriptionForm'
 import { Dashboard } from '@/components/Dashboard'
+import { PricingPage } from '@/components/PricingPage'
+import { PlanBadge } from '@/components/FeatureGate'
 import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
-import { Plus, LayoutDashboard, LogOut, Wallet } from 'lucide-react'
+import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard, Building2 } from 'lucide-react'
 
-type AppState = 'landing' | 'wallet' | 'dashboard' | 'create'
+type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing' | 'company'
 
 function App() {
   const [currentPage, setCurrentPage] = useState<AppState>('landing')
@@ -42,6 +45,18 @@ function App() {
   if (currentPage === 'wallet' && isConnected) {
     setCurrentPage('dashboard')
   }
+
+  // Listen for navigation events from feature gates
+  useEffect(() => {
+    const handleNavigateToPricing = () => {
+      setCurrentPage('pricing')
+    }
+
+    window.addEventListener('navigate-to-pricing', handleNavigateToPricing)
+    return () => {
+      window.removeEventListener('navigate-to-pricing', handleNavigateToPricing)
+    }
+  }, [])
 
   const renderNavigation = () => {
     if (!isConnected || currentPage === 'landing' || currentPage === 'wallet') {
@@ -82,10 +97,27 @@ function App() {
                 <Plus className="w-4 h-4" />
                 <span>Create</span>
               </Button>
+              <Button
+                variant={currentPage === 'pricing' ? 'secondary' : 'ghost'}
+                onClick={() => setCurrentPage('pricing')}
+                className="flex items-center space-x-2"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Pricing</span>
+              </Button>
+              <Button
+                variant={currentPage === 'company' ? 'secondary' : 'ghost'}
+                onClick={() => setCurrentPage('company')}
+                className="flex items-center space-x-2"
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Company</span>
+              </Button>
             </nav>
 
             {/* Wallet Info */}
             <div className="flex items-center space-x-3">
+              <PlanBadge />
               <div className="hidden sm:flex items-center space-x-3 glass rounded-lg px-3 py-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-sm font-medium">{formatAddress(address!)}</span>
@@ -103,22 +135,42 @@ function App() {
 
           {/* Mobile Navigation */}
           <div className="md:hidden border-t border-border/40">
-            <div className="flex space-x-1 py-2">
+            <div className="grid grid-cols-4 gap-1 py-2">
               <Button
                 variant={currentPage === 'dashboard' ? 'secondary' : 'ghost'}
                 onClick={() => setCurrentPage('dashboard')}
-                className="flex-1 flex items-center justify-center space-x-2 py-2"
+                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
+                size="sm"
               >
                 <LayoutDashboard className="w-4 h-4" />
-                <span>Dashboard</span>
+                <span className="text-xs">Dashboard</span>
               </Button>
               <Button
                 variant={currentPage === 'create' ? 'secondary' : 'ghost'}
                 onClick={() => setCurrentPage('create')}
-                className="flex-1 flex items-center justify-center space-x-2 py-2"
+                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
+                size="sm"
               >
                 <Plus className="w-4 h-4" />
-                <span>Create</span>
+                <span className="text-xs">Create</span>
+              </Button>
+              <Button
+                variant={currentPage === 'pricing' ? 'secondary' : 'ghost'}
+                onClick={() => setCurrentPage('pricing')}
+                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
+                size="sm"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span className="text-xs">Pricing</span>
+              </Button>
+              <Button
+                variant={currentPage === 'company' ? 'secondary' : 'ghost'}
+                onClick={() => setCurrentPage('company')}
+                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
+                size="sm"
+              >
+                <Building2 className="w-4 h-4" />
+                <span className="text-xs">Company</span>
               </Button>
             </div>
           </div>
@@ -185,13 +237,42 @@ function App() {
               </main>
             </motion.div>
           )}
+
+          {currentPage === 'pricing' && (
+            <motion.div
+              key="pricing"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <PricingPage />
+            </motion.div>
+          )}
+
+          {currentPage === 'company' && isConnected && (
+            <motion.div
+              key="company"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div className="text-center py-20">
+                  <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
+                  <p className="text-muted-foreground">Coming soon...</p>
+                </div>
+              </main>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
     )
   }
 
   return (
-    <>
+    <SubscriptionProvider>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -217,7 +298,7 @@ function App() {
       />
       {renderNavigation()}
       {renderContent()}
-    </>
+    </SubscriptionProvider>
   )
 }
 

@@ -13,7 +13,7 @@ interface SubscriptionFormData {
   recipientAddress: string
   tokenAmount: string
   tokenSymbol: string
-  frequency: 'daily' | 'weekly' | 'monthly'
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
 }
 
 interface SubscriptionFormProps {
@@ -142,11 +142,12 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
               <Select
                 id="frequency"
                 value={formData.frequency}
-                onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly' }))}
               >
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
               </Select>
             </div>
 
