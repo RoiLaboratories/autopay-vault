@@ -25,19 +25,19 @@ export interface SubscriptionContextType {
 
 const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   free: {
-    maxSubscriptions: 1,
-    maxClients: 1,
+    maxSubscriptions: 3,
+    maxClients: 3,
     features: ['basic_subscriptions', 'wallet_connect']
   },
   pro: {
-    maxSubscriptions: 25,
-    maxClients: 25,
-    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications']
+    maxSubscriptions: 50,
+    maxClients: 50,
+    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'company_dashboard']
   },
   enterprise: {
     maxSubscriptions: -1, // unlimited
     maxClients: -1, // unlimited
-    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'api_access', 'priority_support']
+    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'api_access', 'priority_support', 'company_dashboard']
   }
 }
 

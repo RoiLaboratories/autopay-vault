@@ -7,7 +7,7 @@ import { WalletConnect } from '@/components/WalletConnect'
 import { SubscriptionForm } from '@/components/SubscriptionForm'
 import { Dashboard } from '@/components/Dashboard'
 import { PricingPage } from '@/components/PricingPage'
-import { PlanBadge } from '@/components/FeatureGate'
+import { PlanBadge, FeatureGate } from '@/components/FeatureGate'
 import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
 import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard, Building2 } from 'lucide-react'
@@ -259,10 +259,30 @@ function App() {
               transition={{ duration: 0.3 }}
             >
               <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="text-center py-20">
-                  <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
-                  <p className="text-muted-foreground">Coming soon...</p>
-                </div>
+                <FeatureGate 
+                  feature="company_dashboard" 
+                  requiredPlan="pro"
+                  fallback={
+                    <div className="text-center py-20">
+                      <div className="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Building2 className="w-8 h-8 text-primary" />
+                      </div>
+                      <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
+                      <p className="text-muted-foreground mb-6">
+                        Upgrade to Pro plan to access company features including team management, 
+                        advanced analytics, and bulk operations.
+                      </p>
+                      <Button onClick={() => setCurrentPage('pricing')} size="lg">
+                        Upgrade to Pro
+                      </Button>
+                    </div>
+                  }
+                >
+                  <div className="text-center py-20">
+                    <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
+                    <p className="text-muted-foreground">Welcome to your company dashboard!</p>
+                  </div>
+                </FeatureGate>
               </main>
             </motion.div>
           )}

@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, DollarSign } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { LimitGate } from '@/components/FeatureGate'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +24,7 @@ interface SubscriptionFormProps {
 
 export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
   const { address } = useWallet()
+  const { planLimits } = useSubscription()
   const [formData, setFormData] = useState<SubscriptionFormData>({
     recipientAddress: '',
     tokenAmount: '',
@@ -30,6 +33,27 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentSubscriptionCount, setCurrentSubscriptionCount] = useState(0)
+
+  // Fetch current subscription count when component mounts
+  const fetchSubscriptionCount = async () => {
+    if (!address) return
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/get-subscriptions?user_address=${encodeURIComponent(address)}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentSubscriptionCount(data.subscriptions?.length || 0)
+      }
+    } catch (err) {
+      console.error('Failed to fetch subscription count:', err)
+    }
+  }
+
+  // Fetch count on mount and when address changes
+  React.useEffect(() => {
+    fetchSubscriptionCount()
+  }, [address])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,6 +91,8 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
       })
 
       toast.success('Subscription created successfully!')
+      // Update local count and refresh parent
+      setCurrentSubscriptionCount(prev => prev + 1)
       onSuccess()
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create subscription'
@@ -78,11 +104,39 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+    <LimitGate 
+      limitType="subscriptions" 
+      current={currentSubscriptionCount}
+      fallback={
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="glass">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Create New Subscription
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center py-8">
+              <p className="text-muted-foreground mb-4">
+                You've reached your subscription limit of {planLimits.maxSubscriptions}.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Upgrade to Pro to create up to 50 subscriptions.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      }
     >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
       <Card className="glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -177,5 +231,6 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
         </CardContent>
       </Card>
     </motion.div>
+    </LimitGate>
   )
 }
