@@ -55,7 +55,16 @@ export const useWallet = () => {
     }
   }
 
-  const disconnectWallet = () => {
+  const disconnectWallet = async () => {
+    try {
+      // Try to properly disconnect from the Coinbase Wallet SDK
+      if (ethereum.disconnect) {
+        await ethereum.disconnect()
+      }
+    } catch (error) {
+      console.error('Error disconnecting from wallet:', error)
+    }
+    
     setWalletState({
       isConnected: false,
       address: null,

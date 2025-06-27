@@ -23,7 +23,8 @@ function App() {
   }
 
   const handleGetStarted = () => {
-    if (isConnected) {
+    console.log('Get Started clicked, isConnected:', isConnected, 'address:', address)
+    if (isConnected && address) {
       setCurrentPage('dashboard')
     } else {
       setCurrentPage('wallet')
@@ -35,16 +36,25 @@ function App() {
     // The success toast is already handled in SubscriptionForm
   }
 
-  const handleDisconnect = () => {
-    disconnectWallet()
+  const handleDisconnect = async () => {
+    await disconnectWallet()
     setCurrentPage('landing')
     // The success toast is already handled in useWallet hook
   }
 
-  // Auto-redirect to dashboard if wallet is connected
-  if (currentPage === 'wallet' && isConnected) {
-    setCurrentPage('dashboard')
-  }
+  // Auto-redirect to dashboard if wallet is connected and we're on the wallet page
+  useEffect(() => {
+    if (currentPage === 'wallet' && isConnected && address) {
+      setCurrentPage('dashboard')
+    }
+  }, [currentPage, isConnected, address])
+
+  // Handle wallet disconnection - redirect to landing if on a protected page
+  useEffect(() => {
+    if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create' || currentPage === 'company')) {
+      setCurrentPage('landing')
+    }
+  }, [isConnected, currentPage])
 
   // Listen for navigation events from feature gates
   useEffect(() => {
