@@ -33,7 +33,7 @@ export const Dashboard = () => {
     if (!address) return
 
     try {
-      const response = await fetch(`/api/get-subscriptions?user_address=${encodeURIComponent(address)}`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/get-subscriptions?user_address=${encodeURIComponent(address)}`)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -105,7 +105,7 @@ export const Dashboard = () => {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active'
     
     try {
-      const response = await fetch('/api/update-subscription', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/update-subscription`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ export const Dashboard = () => {
     if (!subscriptionToDelete) return
 
     try {
-      const response = await fetch('/api/update-subscription', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/update-subscription`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
