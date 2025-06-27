@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { 
   TrendingUp, 
   Clock, 
@@ -16,7 +17,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { supabase, type Subscription } from '@/lib/supabase'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { type Subscription } from '@/lib/supabase'
 import { useWallet } from '@/hooks/useWallet'
 
 export const Dashboard = () => {
@@ -24,21 +26,27 @@ export const Dashboard = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [subscriptionToDelete, setSubscriptionToDelete] = useState<string | null>(null)
 
   const fetchSubscriptions = async () => {
     if (!address) return
 
     try {
-      const { data, error: supabaseError } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_address', address)
-        .order('created_at', { ascending: false })
+      const response = await fetch(`/api/get-subscriptions?user_address=${encodeURIComponent(address)}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to fetch subscriptions')
+      }
 
-      if (supabaseError) throw supabaseError
-      setSubscriptions(data || [])
+      const data = await response.json()
+      setSubscriptions(data.subscriptions || [])
+      setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch subscriptions')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch subscriptions'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -97,29 +105,68 @@ export const Dashboard = () => {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active'
     
     try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ status: newStatus })
-        .eq('id', id)
+      const response = await fetch('/api/update-subscription', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscription_id: id,
+          user_address: address,
+          status: newStatus
+        })
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update subscription')
+      }
+
       fetchSubscriptions()
+      toast.success(`Subscription ${newStatus === 'active' ? 'activated' : 'paused'} successfully!`)
     } catch (err) {
       console.error('Failed to toggle subscription:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update subscription'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
-  const deleteSubscription = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('subscriptions')
-        .update({ status: 'cancelled' })
-        .eq('id', id)
+  const handleDeleteClick = (id: string) => {
+    setSubscriptionToDelete(id)
+    setDeleteDialogOpen(true)
+  }
 
-      if (error) throw error
+  const confirmDelete = async () => {
+    if (!subscriptionToDelete) return
+
+    try {
+      const response = await fetch('/api/update-subscription', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscription_id: subscriptionToDelete,
+          user_address: address,
+          status: 'cancelled'
+        })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to cancel subscription')
+      }
+
       fetchSubscriptions()
+      toast.success('Subscription cancelled successfully!')
+      setDeleteDialogOpen(false)
+      setSubscriptionToDelete(null)
     } catch (err) {
       console.error('Failed to delete subscription:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel subscription'
+      setError(errorMessage)
+      toast.error(errorMessage)
     }
   }
 
@@ -564,7 +611,7 @@ export const Dashboard = () => {
                               whileTap={{ scale: 0.95 }}
                             >
                               <Button
-                                onClick={() => deleteSubscription(subscription.id)}
+                                onClick={() => handleDeleteClick(subscription.id)}
                                 variant="outline"
                                 size="sm"
                                 className="text-destructive hover:text-destructive hover:border-destructive/50"
@@ -583,6 +630,32 @@ export const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this subscription? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Keep Subscription
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+            >
+              Cancel Subscription
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }

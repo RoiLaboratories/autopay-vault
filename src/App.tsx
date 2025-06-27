@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Toaster } from 'react-hot-toast'
 import { LandingPage } from '@/components/LandingPage'
 import { WalletConnect } from '@/components/WalletConnect'
 import { SubscriptionForm } from '@/components/SubscriptionForm'
@@ -28,11 +29,13 @@ function App() {
 
   const handleSubscriptionCreated = () => {
     setCurrentPage('dashboard')
+    // The success toast is already handled in SubscriptionForm
   }
 
   const handleDisconnect = () => {
     disconnectWallet()
     setCurrentPage('landing')
+    // The success toast is already handled in useWallet hook
   }
 
   // Auto-redirect to dashboard if wallet is connected
@@ -189,6 +192,29 @@ function App() {
 
   return (
     <>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--card-foreground))',
+            border: '1px solid hsl(var(--border))',
+          },
+          success: {
+            iconTheme: {
+              primary: 'hsl(var(--primary))',
+              secondary: 'hsl(var(--primary-foreground))',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: 'hsl(var(--destructive))',
+              secondary: 'hsl(var(--destructive-foreground))',
+            },
+          },
+        }}
+      />
       {renderNavigation()}
       {renderContent()}
     </>

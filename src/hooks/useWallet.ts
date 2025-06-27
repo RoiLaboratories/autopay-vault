@@ -1,5 +1,6 @@
 import CoinbaseWalletSDK from '@coinbase/wallet-sdk'
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 
 const APP_NAME = 'AutoPay Vault'
 const APP_LOGO_URL = 'https://via.placeholder.com/64x64.png?text=APV'
@@ -41,13 +42,16 @@ export const useWallet = () => {
           isLoading: false,
           error: null
         })
+        toast.success('Wallet connected successfully!')
       }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet'
       setWalletState(prev => ({
         ...prev,
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to connect wallet'
+        error: errorMessage
       }))
+      toast.error(errorMessage)
     }
   }
 
@@ -58,6 +62,7 @@ export const useWallet = () => {
       isLoading: false,
       error: null
     })
+    toast.success('Wallet disconnected')
   }
 
   const checkConnection = async () => {

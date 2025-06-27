@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, DollarSign } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { supabase } from '@/lib/supabase'
 import { useWallet } from '@/hooks/useWallet'
 
 interface SubscriptionFormData {
@@ -39,35 +39,24 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
     setError(null)
 
     try {
-      // Calculate next payment date
-      const now = new Date()
-      const nextPaymentDate = new Date(now)
-      
-      switch (formData.frequency) {
-        case 'daily':
-          nextPaymentDate.setDate(now.getDate() + 1)
-          break
-        case 'weekly':
-          nextPaymentDate.setDate(now.getDate() + 7)
-          break
-        case 'monthly':
-          nextPaymentDate.setMonth(now.getMonth() + 1)
-          break
-      }
-
-      const { error: supabaseError } = await supabase
-        .from('subscriptions')
-        .insert({
+      const response = await fetch('/api/create-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           user_address: address,
           recipient_address: formData.recipientAddress,
           token_amount: parseFloat(formData.tokenAmount),
           token_symbol: formData.tokenSymbol,
-          frequency: formData.frequency,
-          next_payment_date: nextPaymentDate.toISOString(),
-          status: 'active'
+          frequency: formData.frequency
         })
+      })
 
-      if (supabaseError) throw supabaseError
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create subscription')
+      }
 
       // Reset form
       setFormData({
@@ -77,9 +66,12 @@ export const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
         frequency: 'monthly'
       })
 
+      toast.success('Subscription created successfully!')
       onSuccess()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create subscription')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create subscription'
+      setError(errorMessage)
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
