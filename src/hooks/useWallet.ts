@@ -26,6 +26,8 @@ export const useWallet = () => {
     isLoading: false,
     error: null
   })
+  
+  const [manuallyDisconnected, setManuallyDisconnected] = useState(false)
 
   const connectWallet = async () => {
     try {
@@ -42,6 +44,7 @@ export const useWallet = () => {
           isLoading: false,
           error: null
         })
+        setManuallyDisconnected(false) // Reset the manual disconnect flag
         toast.success('Wallet connected successfully!')
       }
     } catch (error) {
@@ -57,25 +60,47 @@ export const useWallet = () => {
 
   const disconnectWallet = async () => {
     try {
+      // Set manual disconnect flag first
+      setManuallyDisconnected(true)
+      
+      // First clear the state immediately
+      setWalletState({
+        isConnected: false,
+        address: null,
+        isLoading: false,
+        error: null
+      })
+      
       // Try to properly disconnect from the Coinbase Wallet SDK
       if (ethereum.disconnect) {
         await ethereum.disconnect()
       }
+      
+      // Clear any stored connection data
+      localStorage.removeItem('-walletlink:https://www.walletlink.org:version')
+      localStorage.removeItem('-walletlink:https://www.walletlink.org:session:id')
+      localStorage.removeItem('-walletlink:https://www.walletlink.org:session:secret')
+      localStorage.removeItem('-walletlink:https://www.walletlink.org:session:linked')
+      
     } catch (error) {
       console.error('Error disconnecting from wallet:', error)
+      // Still ensure state is cleared even if disconnect fails
+      setWalletState({
+        isConnected: false,
+        address: null,
+        isLoading: false,
+        error: null
+      })
     }
     
-    setWalletState({
-      isConnected: false,
-      address: null,
-      isLoading: false,
-      error: null
-    })
     toast.success('Wallet disconnected')
   }
 
   const checkConnection = async () => {
     try {
+      // Don't check connection if user manually disconnected
+      if (manuallyDisconnected) return
+      
       const accounts = await ethereum.request({ method: 'eth_accounts' }) as string[]
       if (accounts && accounts.length > 0) {
         setWalletState(prev => ({
@@ -94,13 +119,17 @@ export const useWallet = () => {
 
     const handleAccountsChanged = (accounts: string[]) => {
       if (accounts.length === 0) {
-        disconnectWallet()
+        // Only disconnect if it wasn't a manual disconnect
+        if (!manuallyDisconnected) {
+          disconnectWallet()
+        }
       } else {
         setWalletState(prev => ({
           ...prev,
           address: accounts[0],
           isConnected: true
         }))
+        setManuallyDisconnected(false) // Reset flag when wallet connects
       }
     }
 

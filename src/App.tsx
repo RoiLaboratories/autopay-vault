@@ -23,10 +23,16 @@ function App() {
   }
 
   const handleGetStarted = () => {
-    console.log('Get Started clicked, isConnected:', isConnected, 'address:', address)
+    console.log('Get Started clicked:')
+    console.log('- isConnected:', isConnected)
+    console.log('- address:', address)
+    console.log('- currentPage:', currentPage)
+    
     if (isConnected && address) {
+      console.log('Navigating to dashboard')
       setCurrentPage('dashboard')
     } else {
+      console.log('Navigating to wallet connect')
       setCurrentPage('wallet')
     }
   }
@@ -37,7 +43,9 @@ function App() {
   }
 
   const handleDisconnect = async () => {
+    console.log('handleDisconnect called')
     await disconnectWallet()
+    console.log('Wallet disconnected, setting page to landing')
     setCurrentPage('landing')
     // The success toast is already handled in useWallet hook
   }
