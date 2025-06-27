@@ -24,8 +24,8 @@ class AutoPayVaultAgent {
       throw new Error('Missing Supabase configuration')
     }
 
-    if (!process.env.ETHEREUM_RPC_URL || !process.env.PRIVATE_KEY) {
-      throw new Error('Missing Ethereum configuration')
+    if (!process.env.BASE_RPC_URL || !process.env.PRIVATE_KEY) {
+      throw new Error('Missing Base network configuration')
     }
 
     // Initialize services
