@@ -18,6 +18,15 @@ function App() {
   const [currentPage, setCurrentPage] = useState<AppState>('landing')
   const { isConnected, address, disconnectWallet } = useWallet()
 
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('App state changed:', {
+      currentPage,
+      isConnected,
+      address: address ? `${address.slice(0, 6)}...${address.slice(-4)}` : null
+    })
+  }, [currentPage, isConnected, address])
+
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
@@ -54,30 +63,18 @@ function App() {
 
   // Auto-redirect to dashboard if wallet is connected and we're on the wallet page
   useEffect(() => {
+    console.log('Navigation effect triggered:', { currentPage, isConnected, address })
+    
     if (currentPage === 'wallet' && isConnected && address) {
       console.log('Auto-redirecting to dashboard after wallet connection')
-      console.log('- currentPage:', currentPage)
-      console.log('- isConnected:', isConnected)
-      console.log('- address:', address)
-      
-      // Small delay to ensure wallet state has fully propagated
-      setTimeout(() => {
-        setCurrentPage('dashboard')
-      }, 100)
-    }
-  }, [currentPage, isConnected, address])
-
-  // Additional effect to handle wallet connection changes more reliably
-  useEffect(() => {
-    if (isConnected && address && currentPage === 'wallet') {
-      console.log('Wallet connected while on wallet page, navigating to dashboard')
       setCurrentPage('dashboard')
     }
-  }, [isConnected, address])
+  }, [currentPage, isConnected, address])
 
   // Handle wallet disconnection - redirect to landing if on a protected page
   useEffect(() => {
     if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create' || currentPage === 'company')) {
+      console.log('Wallet disconnected, redirecting to landing')
       setCurrentPage('landing')
     }
   }, [isConnected, currentPage])

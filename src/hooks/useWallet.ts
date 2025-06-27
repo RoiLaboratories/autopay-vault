@@ -56,7 +56,11 @@ export const useWallet = () => {
         
         console.log('useWallet: State updated, showing success toast')
         toast.success('Wallet connected successfully!')
+        
+        return true // Return success
       }
+      
+      return false // Return failure if no accounts
     } catch (error) {
       console.error('useWallet: Connection failed', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet'
@@ -66,6 +70,7 @@ export const useWallet = () => {
         error: errorMessage
       }))
       toast.error(errorMessage)
+      return false // Return failure
     }
   }
 
@@ -127,6 +132,9 @@ export const useWallet = () => {
   }
 
   useEffect(() => {
+    console.log('useWallet: useEffect triggered, checking connection')
+    console.log('- manuallyDisconnected:', manuallyDisconnected)
+    
     checkConnection()
 
     const handleAccountsChanged = (accounts: string[]) => {
@@ -155,7 +163,7 @@ export const useWallet = () => {
     return () => {
       ethereum.removeListener('accountsChanged', handleAccountsChanged)
     }
-  }, [])
+  }, [manuallyDisconnected]) // Add manuallyDisconnected to dependencies
 
   return {
     ...walletState,
