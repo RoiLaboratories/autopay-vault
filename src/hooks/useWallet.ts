@@ -34,6 +34,7 @@ export const useWallet = () => {
 
   const connectWallet = async () => {
     try {
+      console.log('useWallet: Starting connection process')
       setWalletState(prev => ({ ...prev, isLoading: true, error: null }))
       
       const accounts = await ethereum.request({
@@ -41,6 +42,9 @@ export const useWallet = () => {
       }) as string[]
       
       if (accounts && accounts.length > 0) {
+        console.log('useWallet: Connection successful, setting state')
+        console.log('- address:', accounts[0])
+        
         setWalletState({
           isConnected: true,
           address: accounts[0],
@@ -49,9 +53,12 @@ export const useWallet = () => {
         })
         setManuallyDisconnected(false) // Reset the manual disconnect flag
         localStorage.removeItem('wallet-manually-disconnected') // Clear from localStorage
+        
+        console.log('useWallet: State updated, showing success toast')
         toast.success('Wallet connected successfully!')
       }
     } catch (error) {
+      console.error('useWallet: Connection failed', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect wallet'
       setWalletState(prev => ({
         ...prev,
@@ -123,12 +130,16 @@ export const useWallet = () => {
     checkConnection()
 
     const handleAccountsChanged = (accounts: string[]) => {
+      console.log('useWallet: accountsChanged event', { accounts, manuallyDisconnected })
+      
       if (accounts.length === 0) {
         // Only disconnect if it wasn't a manual disconnect
         if (!manuallyDisconnected) {
+          console.log('useWallet: No accounts, disconnecting')
           disconnectWallet()
         }
       } else {
+        console.log('useWallet: Accounts found, updating state')
         setWalletState(prev => ({
           ...prev,
           address: accounts[0],

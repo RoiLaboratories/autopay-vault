@@ -10,6 +10,12 @@ export const WalletConnect = () => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
+  const handleConnect = async () => {
+    console.log('WalletConnect: Attempting to connect wallet')
+    await connectWallet()
+    console.log('WalletConnect: Connect attempt completed', { isConnected, address })
+  }
+
   if (isConnected && address) {
     return (
       <motion.div
@@ -56,7 +62,7 @@ export const WalletConnect = () => {
         )}
         
         <Button
-          onClick={connectWallet}
+          onClick={handleConnect}
           disabled={isLoading}
           size="lg"
           className="group"

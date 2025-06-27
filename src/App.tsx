@@ -55,9 +55,25 @@ function App() {
   // Auto-redirect to dashboard if wallet is connected and we're on the wallet page
   useEffect(() => {
     if (currentPage === 'wallet' && isConnected && address) {
-      setCurrentPage('dashboard')
+      console.log('Auto-redirecting to dashboard after wallet connection')
+      console.log('- currentPage:', currentPage)
+      console.log('- isConnected:', isConnected)
+      console.log('- address:', address)
+      
+      // Small delay to ensure wallet state has fully propagated
+      setTimeout(() => {
+        setCurrentPage('dashboard')
+      }, 100)
     }
   }, [currentPage, isConnected, address])
+
+  // Additional effect to handle wallet connection changes more reliably
+  useEffect(() => {
+    if (isConnected && address && currentPage === 'wallet') {
+      console.log('Wallet connected while on wallet page, navigating to dashboard')
+      setCurrentPage('dashboard')
+    }
+  }, [isConnected, address])
 
   // Handle wallet disconnection - redirect to landing if on a protected page
   useEffect(() => {
