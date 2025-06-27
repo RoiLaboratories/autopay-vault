@@ -28,34 +28,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       status
     }: UpdateSubscriptionRequest = req.body
 
+    // Log the request for debugging
+    console.log('Update subscription request:', { subscription_id, user_address, status })
+
     // Validate required fields
     if (!subscription_id || !user_address || !status) {
+      console.log('Missing required fields:', { subscription_id, user_address, status })
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
+    // Validate status value
+    if (!['active', 'paused', 'cancelled'].includes(status)) {
+      console.log('Invalid status value:', status)
+      return res.status(400).json({ error: 'Invalid status value' })
+    }
+
     // Update subscription status
+    console.log('Attempting to update subscription in database...')
     const { data, error } = await supabase
       .from('subscriptions')
       .update({ 
-        status,
-        updated_at: new Date().toISOString()
+        status
       })
       .eq('id', subscription_id)
       .eq('user_address', user_address) // Ensure user owns this subscription
       .select()
-      .single()
+
+    console.log('Supabase response:', { data, error })
 
     if (error) {
+      console.error('Supabase error:', error)
       throw error
     }
 
-    if (!data) {
+    if (!data || data.length === 0) {
+      console.log('No data returned - subscription not found or access denied')
       return res.status(404).json({ error: 'Subscription not found or access denied' })
     }
 
+    console.log('Subscription updated successfully:', data)
+
     res.status(200).json({
       message: 'Subscription updated successfully',
-      subscription: data
+      subscription: data[0] // Return first item since we removed .single()
     })
 
   } catch (error) {
