@@ -28,12 +28,14 @@ function App() {
     console.log('- address:', address)
     console.log('- currentPage:', currentPage)
     
-    if (isConnected && address) {
-      console.log('Navigating to dashboard')
-      setCurrentPage('dashboard')
-    } else {
+    // Always show wallet connect modal if not connected
+    // This ensures fresh connection attempt after disconnect
+    if (!isConnected || !address) {
       console.log('Navigating to wallet connect')
       setCurrentPage('wallet')
+    } else {
+      console.log('Navigating to dashboard')
+      setCurrentPage('dashboard')
     }
   }
 

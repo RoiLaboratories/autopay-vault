@@ -27,7 +27,10 @@ export const useWallet = () => {
     error: null
   })
   
-  const [manuallyDisconnected, setManuallyDisconnected] = useState(false)
+  const [manuallyDisconnected, setManuallyDisconnected] = useState(() => {
+    // Initialize from localStorage to persist across page refreshes
+    return localStorage.getItem('wallet-manually-disconnected') === 'true'
+  })
 
   const connectWallet = async () => {
     try {
@@ -45,6 +48,7 @@ export const useWallet = () => {
           error: null
         })
         setManuallyDisconnected(false) // Reset the manual disconnect flag
+        localStorage.removeItem('wallet-manually-disconnected') // Clear from localStorage
         toast.success('Wallet connected successfully!')
       }
     } catch (error) {
@@ -62,6 +66,7 @@ export const useWallet = () => {
     try {
       // Set manual disconnect flag first
       setManuallyDisconnected(true)
+      localStorage.setItem('wallet-manually-disconnected', 'true') // Persist across refreshes
       
       // First clear the state immediately
       setWalletState({
@@ -130,6 +135,7 @@ export const useWallet = () => {
           isConnected: true
         }))
         setManuallyDisconnected(false) // Reset flag when wallet connects
+        localStorage.removeItem('wallet-manually-disconnected') // Clear from localStorage
       }
     }
 
