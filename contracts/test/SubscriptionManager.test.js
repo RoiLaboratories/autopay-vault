@@ -54,10 +54,10 @@ describe("SubscriptionManager", function () {
       // Approve USDC spending
       await mockUSDC.connect(user).approve(await subscriptionManager.getAddress(), cost);
 
-      // Subscribe
+      // Subscribe and just check that event is emitted with correct user and months
       await expect(subscriptionManager.connect(user).subscribe(months))
         .to.emit(subscriptionManager, "Subscribed")
-        .withArgs(user.address, anyValue, months);
+        .withArgs(user.address, anyValue, months); // Use anyValue for timestamp since it can vary by 1 second
 
       // Check if subscription is active
       expect(await subscriptionManager.isActive(user.address)).to.be.true;
@@ -68,15 +68,18 @@ describe("SubscriptionManager", function () {
     });
 
     it("Should require sufficient USDC balance", async function () {
+      // Give user only 50 USDC (not enough for 12 months which costs 120 USDC)
+      await mockUSDC.mint(user.address, ethers.parseUnits("50", 6));
+      
       const months = 12;
       const cost = (await subscriptionManager.pricePerMonth()) * BigInt(months);
 
-      // User only has 1000 USDC, but 12 months costs 120 USDC, so this should work
+      // Approve spending but user doesn't have enough balance
       await mockUSDC.connect(user).approve(await subscriptionManager.getAddress(), cost);
-      await expect(subscriptionManager.connect(user).subscribe(months)).to.not.be.reverted;
-
-      // But if we try to subscribe for more than they can afford
-      await expect(subscriptionManager.connect(user).subscribe(12)).to.be.revertedWith("Insufficient USDC balance");
+      
+      // This should fail due to insufficient balance
+      await expect(subscriptionManager.connect(user).subscribe(months))
+        .to.be.revertedWith("Insufficient USDC balance");
     });
 
     it("Should require USDC approval", async function () {
@@ -120,7 +123,8 @@ describe("SubscriptionManager", function () {
       const newPrice = ethers.parseUnits("15", 6);
       
       await expect(subscriptionManager.connect(user).setPricePerMonth(newPrice))
-        .to.be.revertedWith("Ownable: caller is not the owner");
+        .to.be.revertedWithCustomError(subscriptionManager, "OwnableUnauthorizedAccount")
+        .withArgs(user.address);
     });
 
     it("Should allow owner to extend subscription", async function () {
