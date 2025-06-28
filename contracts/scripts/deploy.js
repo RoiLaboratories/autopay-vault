@@ -7,50 +7,89 @@ async function main() {
   // Treasury address (replace with your treasury wallet)
   const TREASURY_ADDRESS = process.env.TREASURY_ADDRESS || ""; // Ensure this is set in your environment variables
 
-  console.log("Deploying SubscriptionManager contract...");
+  console.log("Deploying contracts...");
   console.log("USDC Address:", USDC_ADDRESS);
   console.log("Treasury Address:", TREASURY_ADDRESS);
 
+  // Deploy SubscriptionManager
+  console.log("\n1. Deploying SubscriptionManager contract...");
   const SubscriptionManager = await hre.ethers.getContractFactory("SubscriptionManager");
   const subscriptionManager = await SubscriptionManager.deploy(USDC_ADDRESS, TREASURY_ADDRESS);
-
   await subscriptionManager.waitForDeployment();
+  const subscriptionManagerAddress = await subscriptionManager.getAddress();
+  console.log("SubscriptionManager deployed to:", subscriptionManagerAddress);
 
-  const contractAddress = await subscriptionManager.getAddress();
-  console.log("SubscriptionManager deployed to:", contractAddress);
+
 
   // Save deployment info
   const fs = require('fs');
-  const deploymentInfo = {
-    contractAddress,
+  const path = require('path');
+  
+  // Check if deployment file exists and load existing data
+  const deploymentPath = `../deployments/${hre.network.name}.json`;
+  let deploymentInfo = {};
+  
+  if (fs.existsSync(deploymentPath)) {
+    try {
+      const existingData = fs.readFileSync(deploymentPath, 'utf8');
+      deploymentInfo = JSON.parse(existingData);
+      console.log("Found existing deployment info, updating...");
+    } catch (error) {
+      console.log("Could not read existing deployment info, creating new...");
+    }
+  }
+
+  // Update with SubscriptionManager info
+  deploymentInfo = {
+    ...deploymentInfo,
+    subscriptionManager: {
+      address: subscriptionManagerAddress,
+      constructorArgs: [USDC_ADDRESS, TREASURY_ADDRESS],
+      deployedAt: new Date().toISOString()
+    },
     usdcAddress: USDC_ADDRESS,
     treasuryAddress: TREASURY_ADDRESS,
     network: hre.network.name,
-    deployedAt: new Date().toISOString()
+    lastUpdated: new Date().toISOString()
   };
 
-  fs.writeFileSync(
-    `../deployments/${hre.network.name}.json`,
-    JSON.stringify(deploymentInfo, null, 2)
-  );
+  // Ensure deployments directory exists
+  const deploymentsDir = '../deployments';
+  if (!fs.existsSync(deploymentsDir)) {
+    fs.mkdirSync(deploymentsDir, { recursive: true });
+  }
 
-  console.log(`Deployment info saved to deployments/${hre.network.name}.json`);
+  fs.writeFileSync(deploymentPath, JSON.stringify(deploymentInfo, null, 2));
 
-  // Verify contract on Basescan if not on local network
+  console.log(`\nDeployment info saved to deployments/${hre.network.name}.json`);
+
+  // Verify contracts on Basescan if not on local network
   if (hre.network.name !== "hardhat" && hre.network.name !== "localhost") {
-    console.log("Waiting for block confirmations...");
+    console.log("\nWaiting for block confirmations...");
     await subscriptionManager.deploymentTransaction().wait(5);
 
-    console.log("Verifying contract...");
+    console.log("\nVerifying SubscriptionManager contract...");
+    
     try {
       await hre.run("verify:verify", {
-        address: contractAddress,
+        address: subscriptionManagerAddress,
         constructorArguments: [USDC_ADDRESS, TREASURY_ADDRESS],
       });
+      console.log("SubscriptionManager verified successfully!");
     } catch (error) {
-      console.log("Verification failed:", error.message);
+      console.log("SubscriptionManager verification failed:", error.message);
     }
   }
+
+  console.log("\n=== SubscriptionManager Deployment Summary ===");
+  console.log("SubscriptionManager:", subscriptionManagerAddress);
+  console.log("USDC Token:", USDC_ADDRESS);
+  console.log("Treasury:", TREASURY_ADDRESS);
+  console.log("Network:", hre.network.name);
+  
+  console.log("\n=== Usage Instructions ===");
+  console.log("To deploy BillingPlanManager separately:");
+  console.log("npx hardhat run scripts/deploy-billing-plan.js --network", hre.network.name);
 }
 
 main()
