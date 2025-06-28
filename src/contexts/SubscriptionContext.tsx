@@ -77,7 +77,31 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     setIsLoading(true)
     try {
-      const provider = new ethers.BrowserProvider(ethereum)
+      // Try multiple RPC providers in order of preference
+      const rpcUrls = [
+        'https://mainnet.base.org',
+        'https://base.gateway.tenderly.co',
+        'https://base-mainnet.public.blastapi.io'
+      ]
+      
+      let provider
+      for (const url of rpcUrls) {
+        try {
+          provider = new ethers.JsonRpcProvider(url)
+          // Test the connection
+          await provider.getBlockNumber()
+          console.log('Connected to RPC:', url)
+          break
+        } catch (err) {
+          console.log('Failed to connect to RPC:', url)
+          continue
+        }
+      }
+      
+      if (!provider) {
+        throw new Error('Failed to connect to any RPC provider')
+      }
+      
       const contract = new ethers.Contract(SUBSCRIPTION_CONTRACT_ADDRESS, SUBSCRIPTION_ABI, provider)
 
       const [active, expiry, days] = await Promise.all([
