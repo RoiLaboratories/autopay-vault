@@ -277,7 +277,9 @@ export const CompanyDashboard: React.FC = () => {
 
       {/* Billing Plans Tab */}
       {activeTab === 'plans' && (
-        <BillingPlans />
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+          <BillingPlans />
+        </div>
       )}
 
       {/* Clients Tab */}

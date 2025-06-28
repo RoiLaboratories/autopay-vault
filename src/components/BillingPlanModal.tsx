@@ -94,7 +94,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editingPlan ? 'Edit Billing Plan' : 'Create New Billing Plan'}
@@ -107,7 +107,8 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="max-h-[calc(90vh-120px)] overflow-y-auto pr-2">
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Plan Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Plan Name *</Label>
@@ -195,6 +196,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
             </Button>
           </div>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   )

@@ -27,8 +27,8 @@ export interface BillingPlan {
   interval: 'monthly' | 'yearly'
   recipientWallet: string
   createdAt: string
-  subscriptionLink: string
-  companyWallet: string
+  subscriptionLink?: string
+  companyWallet?: string
 }
 
 export const BillingPlans: React.FC = () => {
@@ -72,10 +72,11 @@ export const BillingPlans: React.FC = () => {
       const data = await response.json()
       
       if (response.ok) {
-        setPlans(data.plans)
+        setPlans(data.plans || [])
       } else {
         console.error('Failed to load plans:', data.error)
         toast.error('Failed to load billing plans')
+        setPlans([])
       }
     } catch (error) {
       console.error('Error loading plans:', error)
@@ -88,7 +89,7 @@ export const BillingPlans: React.FC = () => {
   const handleCreatePlan = async (planData: Omit<BillingPlan, 'id' | 'planId' | 'createdAt' | 'subscriptionLink' | 'companyWallet'>) => {
     const planLimit = getPlanLimits()
     
-    if (plans.length >= planLimit) {
+    if ((plans || []).length >= planLimit) {
       toast.error(`Plan limit exceeded. ${userTier === 'free' ? 'Upgrade to Pro' : 'Contact support'} for more plans.`)
       return
     }
@@ -195,16 +196,17 @@ export const BillingPlans: React.FC = () => {
     toast.success('Subscription link copied to clipboard!')
   }
 
-  const filteredPlans = plans.filter(plan =>
-    plan.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    plan.recipientWallet.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPlans = (plans || []).filter(plan =>
+    plan?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    plan?.recipientWallet?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const formatInterval = (interval: string) => {
     return interval.charAt(0).toUpperCase() + interval.slice(1)
   }
 
-  const formatAddress = (address: string) => {
+  const formatAddress = (address: string | undefined) => {
+    if (!address) return 'Unknown address'
     return `${address.slice(0, 6)}...${address.slice(-4)}`
   }
 
@@ -225,11 +227,11 @@ export const BillingPlans: React.FC = () => {
         </div>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-muted-foreground">
-            {plans.length} / {getPlanLimits() === Infinity ? '∞' : getPlanLimits()} plans
+            {(plans || []).length} / {getPlanLimits() === Infinity ? '∞' : getPlanLimits()} plans
           </div>
           <Button 
             onClick={() => setIsModalOpen(true)}
-            disabled={plans.length >= getPlanLimits() || loading}
+            disabled={(plans || []).length >= getPlanLimits() || loading}
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Plan
@@ -269,7 +271,7 @@ export const BillingPlans: React.FC = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
           {filteredPlans.map((plan) => (
             <Card key={plan.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
@@ -291,7 +293,7 @@ export const BillingPlans: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       disabled={loading}
-                      onClick={() => handleDeletePlan(plan.id)}
+                      onClick={() => handleDeletePlan(plan.planId)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -325,19 +327,19 @@ export const BillingPlans: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-2">Subscription Link:</p>
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded p-2 text-sm font-mono truncate">
-                      {plan.subscriptionLink}
+                      {plan.subscriptionLink || `${window.location.origin}/subscribe/${plan.planId}`}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCopyLink(plan.subscriptionLink)}
+                      onClick={() => handleCopyLink(plan.planId)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(plan.subscriptionLink, '_blank')}
+                      onClick={() => window.open(plan.subscriptionLink || `${window.location.origin}/subscribe/${plan.planId}`, '_blank')}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
