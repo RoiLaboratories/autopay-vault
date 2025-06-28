@@ -3,5 +3,12 @@
   "usdcAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
   "treasuryAddress": "0x75E64cd88E6f48fef6F5cF10EB6a464C530240e5",
   "network": "base",
-  "deployedAt": "2025-06-27T18:38:36.134Z"
+  "deployedAt": "2025-06-27T18:38:36.134Z",
+  "billingPlanManager": {
+    "address": "0xe6619e23b406BB7267bf56576018863E8b7BF4D0",
+    "constructorArgs": [
+      "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+    ],
+    "deployedAt": "2025-06-28T16:08:40.120Z"
+  }
 }

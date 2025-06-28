@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
@@ -7,14 +8,46 @@ import { WalletConnect } from '@/components/WalletConnect'
 import { SubscriptionForm } from '@/components/SubscriptionForm'
 import { Dashboard } from '@/components/Dashboard'
 import { PricingPage } from '@/components/PricingPage'
+import { SubscriptionPage } from '@/components/SubscriptionPage'
 import { PlanBadge, FeatureGate } from '@/components/FeatureGate'
 import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
 import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard, Building2 } from 'lucide-react'
+import { CompanyDashboard } from '@/components/CompanyDashboard'
 
 type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing' | 'company'
 
 function App() {
+  return (
+    <Router>
+      <SubscriptionProvider>
+        <Routes>
+          <Route path="/subscribe/:planId" element={<SubscriptionPage />} />
+          <Route path="/*" element={<MainApp />} />
+        </Routes>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#4ade80',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </SubscriptionProvider>
+    </Router>
+  )
+}
+
+function MainApp() {
   const [currentPage, setCurrentPage] = useState<AppState>('landing')
   const { isConnected, address, disconnectWallet } = useWallet()
 
@@ -311,10 +344,7 @@ function App() {
                     </div>
                   }
                 >
-                  <div className="text-center py-20">
-                    <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
-                    <p className="text-muted-foreground">Welcome to your company dashboard!</p>
-                  </div>
+                  <CompanyDashboard />
                 </FeatureGate>
               </main>
             </motion.div>

@@ -20,6 +20,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { type Subscription } from '@/lib/supabase'
 import { useWallet } from '@/hooks/useWallet'
+import { DebugPanel } from './DebugPanel'
 
 export const Dashboard = () => {
   const { address } = useWallet()
@@ -226,6 +227,9 @@ export const Dashboard = () => {
           </Button>
         </div>
       </div>
+
+      {/* Debug Panel - Remove this in production */}
+      <DebugPanel />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
