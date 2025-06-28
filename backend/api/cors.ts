@@ -3,14 +3,21 @@ import { VercelRequest, VercelResponse } from '@vercel/node'
 export function setCorsHeaders(res: VercelResponse, origin?: string) {
   const allowedOrigins = [
     'http://localhost:5173',
+    'http://localhost:3000',
     'https://autopay-vault.vercel.app',
+    'https://autopay-vault-git-main.vercel.app',
     process.env.FRONTEND_URL,
     process.env.CORS_ORIGIN
   ].filter(Boolean)
   
-  const corsOrigin = origin && allowedOrigins.includes(origin) 
-    ? origin 
-    : allowedOrigins[0] || 'http://localhost:5173'
+  // Allow any .vercel.app subdomain or exact matches
+  const isAllowed = origin && (
+    allowedOrigins.includes(origin) ||
+    origin.endsWith('.vercel.app') ||
+    origin.includes('autopay-vault')
+  )
+  
+  const corsOrigin = isAllowed ? origin : allowedOrigins[0] || '*'
   
   res.setHeader('Access-Control-Allow-Origin', corsOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')

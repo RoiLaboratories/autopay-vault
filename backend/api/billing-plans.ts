@@ -67,11 +67,12 @@ async function verifyPlanOnChain(planId: string) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  setCorsHeaders(res)
+  // Handle CORS properly
+  const origin = req.headers.origin as string
+  setCorsHeaders(res, origin)
   
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({})
+    return res.status(200).end()
   }
 
   try {
