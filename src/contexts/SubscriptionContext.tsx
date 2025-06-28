@@ -51,9 +51,9 @@ const SUBSCRIPTION_ABI = [
   'function getExpiry(address user) external view returns (uint256)',
   'function getDaysRemaining(address user) external view returns (uint256)',
   'function subscribe(uint256 months) external',
-  'function pricePerMonth() external view returns (uint256)',
-  'function planLimits(uint256) external view returns (uint256, uint256, bool, bool)',
-  'function getPlanLimits(uint256 planTier) external view returns (tuple(uint256 maxSubscriptions, uint256 maxClients, bool hasAnalytics, bool hasApiAccess))'
+  'function pricePerMonth() view returns (uint256)',
+  'function planLimits(uint256) external view returns (uint256 maxSubscriptions, uint256 maxClients, bool hasAnalytics, bool hasApiAccess)',
+  'function getPlanLimits(uint256 planTier) external view returns (tuple(uint256, uint256, bool, bool))'
 ]
 
 const USDC_ABI = [
@@ -102,8 +102,23 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
         setCurrentPlan('free')
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error refreshing subscription:', error)
+      
+      // Handle specific error types
+      if (error?.code === 'CALL_EXCEPTION') {
+        console.log('Contract call failed - possibly network connectivity issue')
+        // Don't change state for network errors, keep existing state
+      } else if (error?.message?.includes('missing revert data')) {
+        console.log('Contract function may not exist or network timeout')
+        // Keep existing state
+      } else {
+        // For other errors, reset to default free plan
+        setCurrentPlan('free')
+        setIsActive(false)
+        setExpiryDate(null)
+        setDaysRemaining(0)
+      }
     } finally {
       setIsLoading(false)
     }
