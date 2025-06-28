@@ -38,7 +38,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?creatorAddress=${encodeURIComponent(address)}`)
       if (response.ok) {
         const data = await response.json()
-        setCurrentPlanCount(data?.length || 0)
+        setCurrentPlanCount(data?.plans?.length || 0)
       }
     } catch (err) {
       console.error('Failed to fetch plan count:', err)

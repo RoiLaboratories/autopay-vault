@@ -68,7 +68,7 @@ export const BillingPlans: React.FC = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/billing-plans?creatorAddress=${address}`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?creatorAddress=${address}`)
       const data = await response.json()
       
       if (response.ok) {
@@ -99,7 +99,7 @@ export const BillingPlans: React.FC = () => {
       const planId = `plan_${Date.now()}`
       
       // Create plan via API
-      const response = await fetch('/api/billing-plans', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +136,7 @@ export const BillingPlans: React.FC = () => {
     try {
       setLoading(true)
 
-      const response = await fetch('/api/billing-plans', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export const BillingPlans: React.FC = () => {
     try {
       setLoading(true)
 
-      const response = await fetch(`/api/billing-plans?planId=${planId}&creatorAddress=${address}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?planId=${planId}&creatorAddress=${address}`, {
         method: 'DELETE'
       })
 
