@@ -108,9 +108,9 @@ export const FeatureGate: React.FC<FeatureGateProps> = ({
   )
 }
 
-// Limit Gate for checking subscription/client limits
+// Limit Gate for checking subscription/client/plan limits
 interface LimitGateProps {
-  limitType: 'subscriptions' | 'clients'
+  limitType: 'subscriptions' | 'clients' | 'plans'
   current: number
   fallback?: ReactNode
   children: ReactNode
@@ -126,7 +126,9 @@ export const LimitGate: React.FC<LimitGateProps> = ({
   
   const limit = limitType === 'subscriptions' 
     ? planLimits.maxSubscriptions 
-    : planLimits.maxClients
+    : limitType === 'clients'
+    ? planLimits.maxClients
+    : planLimits.maxSubscriptions // Use maxSubscriptions for plans limit
   
   const isAtLimit = limit !== -1 && current >= limit
   

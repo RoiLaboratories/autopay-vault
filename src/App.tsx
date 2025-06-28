@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { LandingPage } from '@/components/LandingPage'
 import { WalletConnect } from '@/components/WalletConnect'
-import { SubscriptionForm } from '@/components/SubscriptionForm'
+import { BillingPlanForm } from '@/components/BillingPlanForm'
 import { Dashboard } from '@/components/Dashboard'
 import { PricingPage } from '@/components/PricingPage'
 import { SubscriptionPage } from '@/components/SubscriptionPage'
@@ -83,7 +83,7 @@ function MainApp() {
 
   const handleSubscriptionCreated = () => {
     setCurrentPage('dashboard')
-    // The success toast is already handled in SubscriptionForm
+    // The success toast is already handled in BillingPlanForm
   }
 
   const handleDisconnect = async () => {
@@ -299,7 +299,7 @@ function MainApp() {
               transition={{ duration: 0.3 }}
             >
               <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <SubscriptionForm onSuccess={handleSubscriptionCreated} />
+                <BillingPlanForm onSuccess={handleSubscriptionCreated} />
               </main>
             </motion.div>
           )}

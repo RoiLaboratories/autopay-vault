@@ -23,7 +23,7 @@ const BillingPlanManagerABI = [
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_KEY!
 )
 
 // Contract configuration
@@ -61,10 +61,12 @@ const verifyOnChainSubscription = async (subscriberAddress: string, planId: stri
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res)
+  // Handle CORS properly
+  const origin = req.headers.origin as string
+  setCorsHeaders(res, origin)
   
   if (req.method === 'OPTIONS') {
-    return res.status(200).json({})
+    return res.status(200).end()
   }
 
   try {
@@ -82,7 +84,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Plan subscriptions API error:', error)
-    return res.status(500).json({ error: 'Internal server error' })
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      request: {
+        method: req.method,
+        query: req.query,
+        body: req.body
+      }
+    })
+    return res.status(500).json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    })
   }
 }
 
@@ -112,7 +126,11 @@ async function handleGetSubscriptions(req: VercelRequest, res: VercelResponse) {
 
   if (error) {
     console.error('Database error:', error)
-    return res.status(500).json({ error: 'Failed to fetch subscriptions' })
+    console.error('Query parameters:', { subscriberAddress, planId, verifyOnChain })
+    return res.status(500).json({ 
+      error: 'Failed to fetch subscriptions',
+      details: error.message || 'Database query failed'
+    })
   }
 
   // Add on-chain verification if requested
@@ -127,10 +145,10 @@ async function handleGetSubscriptions(req: VercelRequest, res: VercelResponse) {
         }
       })
     )
-    return res.status(200).json({ subscriptions: verifiedSubscriptions })
+    return res.status(200).json(verifiedSubscriptions)
   }
 
-  return res.status(200).json({ subscriptions: subscriptions || [] })
+  return res.status(200).json(subscriptions || [])
 }
 
 async function handleCreateSubscription(req: VercelRequest, res: VercelResponse) {

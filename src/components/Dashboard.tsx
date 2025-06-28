@@ -3,11 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { 
   TrendingUp, 
-  Clock, 
   CheckCircle2, 
   XCircle, 
   Pause, 
-  Play, 
   Trash2,
   ArrowUpRight,
   Calendar,
@@ -34,7 +32,7 @@ export const Dashboard = () => {
     if (!address) return
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/get-subscriptions?user_address=${encodeURIComponent(address)}`)
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/plan-subscriptions?subscriberAddress=${encodeURIComponent(address)}`)
       
       if (!response.ok) {
         const errorData = await response.json()
@@ -42,7 +40,7 @@ export const Dashboard = () => {
       }
 
       const data = await response.json()
-      setSubscriptions(data.subscriptions || [])
+      setSubscriptions(data || [])
       setError(null)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch subscriptions'
@@ -69,65 +67,51 @@ export const Dashboard = () => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'active':
-        return {
-          icon: <CheckCircle2 className="w-4 h-4" />,
-          color: 'text-emerald-500',
-          bg: 'bg-emerald-500/10 border-emerald-500/20',
-          label: 'Active'
-        }
-      case 'paused':
-        return {
-          icon: <Pause className="w-4 h-4" />,
-          color: 'text-amber-500',
-          bg: 'bg-amber-500/10 border-amber-500/20',
-          label: 'Paused'
-        }
-      case 'cancelled':
-        return {
-          icon: <XCircle className="w-4 h-4" />,
-          color: 'text-red-500',
-          bg: 'bg-red-500/10 border-red-500/20',
-          label: 'Cancelled'
-        }
-      default:
-        return {
-          icon: <Clock className="w-4 h-4" />,
-          color: 'text-gray-500',
-          bg: 'bg-gray-500/10 border-gray-500/20',
-          label: 'Unknown'
-        }
+  const getStatusConfig = (isActive: boolean) => {
+    if (isActive) {
+      return {
+        icon: <CheckCircle2 className="w-4 h-4" />,
+        color: 'text-emerald-500',
+        bg: 'bg-emerald-500/10 border-emerald-500/20',
+        label: 'Active'
+      }
+    } else {
+      return {
+        icon: <XCircle className="w-4 h-4" />,
+        color: 'text-red-500',
+        bg: 'bg-red-500/10 border-red-500/20',
+        label: 'Inactive'
+      }
     }
   }
 
-  const toggleSubscription = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'paused' : 'active'
+  const toggleSubscription = async (id: string, currentIsActive: boolean) => {
+    if (!currentIsActive) {
+      toast.error('Cannot reactivate cancelled subscriptions')
+      return
+    }
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/update-subscription`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscription_id: id,
-          user_address: address,
-          status: newStatus
-        })
+      // Find the subscription to get plan_id
+      const subscription = subscriptions.find(s => s.id === id)
+      if (!subscription) {
+        throw new Error('Subscription not found')
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/plan-subscriptions?planId=${subscription.plan_id}&subscriberAddress=${address}`, {
+        method: 'DELETE'
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update subscription')
+        throw new Error(errorData.error || 'Failed to cancel subscription')
       }
 
       fetchSubscriptions()
-      toast.success(`Subscription ${newStatus === 'active' ? 'activated' : 'paused'} successfully!`)
+      toast.success('Subscription cancelled successfully!')
     } catch (err) {
-      console.error('Failed to toggle subscription:', err)
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update subscription'
+      console.error('Failed to cancel subscription:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to cancel subscription'
       setError(errorMessage)
       toast.error(errorMessage)
     }
@@ -142,16 +126,14 @@ export const Dashboard = () => {
     if (!subscriptionToDelete) return
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/update-subscription`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          subscription_id: subscriptionToDelete,
-          user_address: address,
-          status: 'cancelled'
-        })
+      // Find the subscription to get plan_id
+      const subscription = subscriptions.find(s => s.id === subscriptionToDelete)
+      if (!subscription) {
+        throw new Error('Subscription not found')
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/plan-subscriptions?planId=${subscription.plan_id}&subscriberAddress=${address}`, {
+        method: 'DELETE'
       })
 
       if (!response.ok) {
@@ -174,13 +156,13 @@ export const Dashboard = () => {
   // Calculate stats
   const stats = {
     total: subscriptions.length,
-    active: subscriptions.filter(s => s.status === 'active').length,
+    active: subscriptions.filter(s => s.is_active).length,
     totalValue: subscriptions
-      .filter(s => s.status === 'active')
-      .reduce((sum, s) => sum + s.token_amount, 0),
+      .filter(s => s.is_active)
+      .reduce((sum, s) => sum + (s.billing_plans?.amount || 0), 0),
     nextPayment: subscriptions
-      .filter(s => s.status === 'active')
-      .sort((a, b) => new Date(a.next_payment_date).getTime() - new Date(b.next_payment_date).getTime())[0]
+      .filter(s => s.is_active)
+      .sort((a, b) => new Date(a.next_payment_due).getTime() - new Date(b.next_payment_due).getTime())[0]
   }
 
   if (isLoading) {
@@ -422,7 +404,7 @@ export const Dashboard = () => {
                     whileHover={{ scale: 1.05, y: -2 }}
                     transition={{ type: "spring", stiffness: 300 }}
                   >
-                    {stats.nextPayment ? formatDate(stats.nextPayment.next_payment_date) : 'None'}
+                    {stats.nextPayment ? formatDate(stats.nextPayment.next_payment_due) : 'None'}
                   </motion.p>
                 </div>
                 <motion.div 
@@ -465,14 +447,14 @@ export const Dashboard = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Active Subscriptions</h2>
             <span className="text-sm text-muted-foreground">
-              {subscriptions.filter(s => s.status === 'active').length} of {subscriptions.length} active
+              {subscriptions.filter(s => s.is_active).length} of {subscriptions.length} active
             </span>
           </div>
           
           <div className="grid gap-4">
             <AnimatePresence>
               {subscriptions.map((subscription, index) => {
-                const statusConfig = getStatusConfig(subscription.status)
+                const statusConfig = getStatusConfig(subscription.is_active)
                 
                 return (
                   <motion.div
@@ -517,7 +499,7 @@ export const Dashboard = () => {
                                   whileHover={{ y: -1, scale: 1.02 }}
                                   transition={{ type: "spring", stiffness: 300 }}
                                 >
-                                  {subscription.token_amount} {subscription.token_symbol}
+                                  {subscription.billing_plans?.amount || 0} USDC
                                 </motion.h3>
                                 <motion.div
                                   whileHover={{ scale: 1.2, rotate: 45 }}
@@ -531,7 +513,9 @@ export const Dashboard = () => {
                                 whileHover={{ y: -1 }}
                                 transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
                               >
-                                to {formatAddress(subscription.recipient_address)}
+                                to {subscription.billing_plans?.recipient_wallet 
+                                  ? formatAddress(subscription.billing_plans.recipient_wallet)
+                                  : 'Unknown recipient'}
                               </motion.p>
                             </div>
                           </div>
@@ -557,12 +541,12 @@ export const Dashboard = () => {
                           transition={{ type: "spring", stiffness: 200 }}
                         >
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Frequency</p>
-                            <p className="font-medium capitalize">{subscription.frequency}</p>
+                            <p className="text-xs text-muted-foreground uppercase tracking-wide">Plan</p>
+                            <p className="font-medium">{subscription.billing_plans?.name || 'Unknown'}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase tracking-wide">Next Payment</p>
-                            <p className="font-medium">{formatDate(subscription.next_payment_date)}</p>
+                            <p className="font-medium">{formatDate(subscription.next_payment_due)}</p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase tracking-wide">Created</p>
@@ -585,21 +569,15 @@ export const Dashboard = () => {
                             className="flex-1"
                           >
                             <Button
-                              onClick={() => toggleSubscription(subscription.id, subscription.status)}
+                              onClick={() => toggleSubscription(subscription.id, subscription.is_active)}
                               variant="outline"
                               size="sm"
-                              disabled={subscription.status === 'cancelled'}
                               className="w-full"
                             >
-                              {subscription.status === 'active' ? (
+                              {subscription.is_active ? (
                                 <>
                                   <Pause className="w-4 h-4 mr-2" />
-                                  Pause
-                                </>
-                              ) : subscription.status === 'paused' ? (
-                                <>
-                                  <Play className="w-4 h-4 mr-2" />
-                                  Resume
+                                  Cancel
                                 </>
                               ) : (
                                 <>
@@ -609,7 +587,7 @@ export const Dashboard = () => {
                               )}
                             </Button>
                           </motion.div>
-                          {subscription.status !== 'cancelled' && (
+                          {subscription.is_active && (
                             <motion.div
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
