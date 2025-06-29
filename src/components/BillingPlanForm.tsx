@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useWallet } from '@/hooks/useWallet'
+import { v4 as uuidv4 } from 'uuid'
 
 interface BillingPlanFormProps {
   onSuccess: () => void
@@ -63,7 +64,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     if (!address) return
 
     // Validate form
-    if (!formData.name.trim() || !formData.amount || !formData.recipientWallet) {
+    if (!formData.name.trim() || !formData.amount || !formData.recipientWallet || !formData.creatorAddress) {
       setError('Please fill in all required fields')
       return
     }
@@ -76,8 +77,11 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     setIsLoading(true)
     setError(null)
 
-    // Always use the connected wallet address for both creatorAddress and recipientWallet unless recipientWallet is changed
+    // Generate a unique planId for each new plan
+    const planId = uuidv4()
+
     const payload = {
+      planId,
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       amount: parseFloat(formData.amount),
