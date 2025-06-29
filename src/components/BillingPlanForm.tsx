@@ -27,7 +27,8 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     description: '',
     amount: '',
     interval: '2592000', // 30 days in seconds (monthly)
-    recipientWallet: address || ''
+    recipientWallet: address || '',
+    creatorAddress: address || ''
   })
 
   // Fetch current billing plan count when component mounts
@@ -45,10 +46,10 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     }
   }
 
-  // Update recipient wallet when address changes
+  // Update recipient wallet and creator address when address changes
   useEffect(() => {
     if (address) {
-      setFormData(prev => ({ ...prev, recipientWallet: address }))
+      setFormData(prev => ({ ...prev, recipientWallet: address, creatorAddress: address }))
       fetchPlanCount()
     }
   }, [address])
@@ -82,7 +83,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
       amount: parseFloat(formData.amount),
       interval: parseInt(formData.interval),
       recipientWallet: formData.recipientWallet || address,
-      creatorAddress: address
+      creatorAddress: formData.creatorAddress || address
     }
 
     try {
@@ -107,7 +108,8 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
         description: '',
         amount: '',
         interval: '2592000',
-        recipientWallet: address
+        recipientWallet: address,
+        creatorAddress: address
       })
 
       toast.success('Billing plan created successfully!')
@@ -242,6 +244,21 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
                 />
                 <p className="text-xs text-muted-foreground">
                   Wallet address where payments will be received
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="creatorAddress">Creator Address *</Label>
+                <Input
+                  id="creatorAddress"
+                  type="text"
+                  placeholder="0x..."
+                  value={formData.creatorAddress}
+                  onChange={(e) => handleInputChange('creatorAddress', e.target.value)}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Wallet address of the plan creator (usually your connected wallet)
                 </p>
               </div>
 
