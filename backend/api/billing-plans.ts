@@ -96,6 +96,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 async function handleGetPlans(req: VercelRequest, res: VercelResponse) {
   const { creatorAddress, planId, public: isPublic } = req.query
+  console.log('handleGetPlans query:', req.query) // Debug log
 
   // If planId is provided, get single plan (for subscription page)
   if (planId) {
