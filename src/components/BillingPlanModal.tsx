@@ -23,6 +23,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     name: '',
+    description: '',
     amount: '',
     interval: 'monthly' as 'monthly' | 'yearly',
     recipientWallet: '',
@@ -34,6 +35,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
     if (editingPlan) {
       setFormData({
         name: editingPlan.name,
+        description: editingPlan.description || '',
         amount: editingPlan.amount.toString(),
         interval: editingPlan.interval,
         recipientWallet: editingPlan.recipient_wallet,
@@ -42,6 +44,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
     } else {
       setFormData({
         name: '',
+        description: '',
         amount: '',
         interval: 'monthly',
         recipientWallet: currentWallet,
@@ -56,6 +59,10 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
 
     if (!formData.name.trim()) {
       newErrors.name = 'Plan name is required'
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required'
     }
 
     if (!formData.amount || isNaN(Number(formData.amount)) || Number(formData.amount) <= 0) {
@@ -87,9 +94,11 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
 
     onSubmit({
       name: formData.name.trim(),
+      description: formData.description.trim(),
       amount: Number(formData.amount),
       interval: formData.interval,
       recipient_wallet: formData.recipientWallet.trim(),
+      // creator_address handled by parent
     })
   }
 
@@ -129,6 +138,19 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
               className={errors.name ? 'border-red-500' : ''}
             />
             {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
+          </div>
+
+          {/* Description */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description *</Label>
+            <Input
+              id="description"
+              placeholder="Brief description of your billing plan"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              className={errors.description ? 'border-red-500' : ''}
+            />
+            {errors.description && <p className="text-sm text-red-500">{errors.description}</p>}
           </div>
 
           {/* Amount */}
@@ -201,6 +223,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
               </CardHeader>
               <CardContent className="text-sm space-y-1">
                 <p><strong>Plan:</strong> {formData.name}</p>
+                <p><strong>Description:</strong> {formData.description}</p>
                 <p><strong>Price:</strong> ${formData.amount} USDC {formData.interval}</p>
                 <p><strong>Recipient:</strong> {formData.recipientWallet.slice(0, 6)}...{formData.recipientWallet.slice(-4)}</p>
                 <p><strong>Creator:</strong> {formData.creatorAddress.slice(0, 6)}...{formData.creatorAddress.slice(-4)}</p>
