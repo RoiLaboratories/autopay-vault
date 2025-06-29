@@ -151,9 +151,7 @@ export const BillingPlans: React.FC = () => {
         },
         body: JSON.stringify({
           ...planData,
-          planId: editingPlan.plan_id,
-          creatorAddress: address,
-          description: planData.description || ''
+          planId: editingPlan.plan_id
         }),
       })
 

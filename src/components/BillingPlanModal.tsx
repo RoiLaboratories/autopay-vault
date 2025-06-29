@@ -9,7 +9,14 @@ import type { BillingPlan } from './BillingPlans'
 interface BillingPlanModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => void
+  onSubmit: (planData: {
+    name: string
+    description: string
+    amount: number
+    interval: 'monthly' | 'yearly'
+    recipient_wallet: string
+    creator_address: string
+  }) => void
   editingPlan?: BillingPlan | null
   currentWallet: string
 }
@@ -98,7 +105,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
       amount: Number(formData.amount),
       interval: formData.interval,
       recipient_wallet: formData.recipientWallet.trim(),
-      // creator_address handled by parent
+      creator_address: formData.creatorAddress.trim()
     })
   }
 
