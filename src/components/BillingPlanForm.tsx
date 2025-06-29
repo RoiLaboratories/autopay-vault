@@ -75,20 +75,23 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     setIsLoading(true)
     setError(null)
 
+    // Always use the connected wallet address for both creatorAddress and recipientWallet unless recipientWallet is changed
+    const payload = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      amount: parseFloat(formData.amount),
+      interval: parseInt(formData.interval),
+      recipientWallet: formData.recipientWallet || address,
+      creatorAddress: address
+    }
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim() || undefined,
-          amount: parseFloat(formData.amount),
-          interval: parseInt(formData.interval),
-          recipientWallet: formData.recipientWallet,
-          creatorAddress: address
-        })
+        body: JSON.stringify(payload)
       })
 
       if (!response.ok) {
