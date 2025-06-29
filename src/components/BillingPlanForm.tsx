@@ -27,7 +27,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     name: '',
     description: '',
     amount: '',
-    interval: '2592000', // 30 days in seconds (monthly)
+    interval: 'monthly', // default to monthly
     recipientWallet: address || '',
     creatorAddress: address || ''
   })
@@ -85,7 +85,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
       name: formData.name.trim(),
       description: formData.description.trim() || undefined,
       amount: parseFloat(formData.amount),
-      interval: parseInt(formData.interval),
+      interval: formData.interval, // send as string
       recipientWallet: formData.recipientWallet || address,
       creatorAddress: formData.creatorAddress || address
     }
@@ -111,7 +111,7 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
         name: '',
         description: '',
         amount: '',
-        interval: '2592000',
+        interval: 'monthly',
         recipientWallet: address,
         creatorAddress: address
       })
@@ -129,13 +129,15 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
     }
   }
 
-  const formatInterval = (intervalSeconds: string) => {
-    const days = parseInt(intervalSeconds) / (24 * 60 * 60)
-    if (days === 1) return 'Daily'
-    if (days === 7) return 'Weekly'
-    if (days === 30) return 'Monthly'
-    if (days === 365) return 'Yearly'
-    return `Every ${days} days`
+  const formatInterval = (interval: string) => {
+    switch (interval) {
+      case 'daily': return 'Daily'
+      case 'weekly': return 'Weekly'
+      case 'monthly': return 'Monthly'
+      case 'yearly': return 'Yearly'
+      default:
+        return interval
+    }
   }
 
   return (
@@ -228,10 +230,10 @@ export const BillingPlanForm = ({ onSuccess }: BillingPlanFormProps) => {
                     className="w-full px-3 py-2 border border-border rounded-md bg-background"
                     required
                   >
-                    <option value="86400">Daily</option>
-                    <option value="604800">Weekly</option>
-                    <option value="2592000">Monthly</option>
-                    <option value="31536000">Yearly</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
                   </select>
                 </div>
               </div>
