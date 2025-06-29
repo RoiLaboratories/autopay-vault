@@ -279,15 +279,7 @@ export const CompanyDashboard: React.FC = () => {
       {/* Billing Plans Tab */}
       {activeTab === 'plans' && (
         <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Create New Billing Plan</CardTitle>
-              <CardDescription>Set up a new billing plan for your company</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <BillingPlanForm onSuccess={() => {/* Optionally reload plans here */}} />
-            </CardContent>
-          </Card>
+          {/* Remove the always-visible BillingPlanForm here, only show BillingPlans (which handles modal) */}
           <BillingPlans />
         </div>
       )}
