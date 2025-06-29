@@ -191,9 +191,9 @@ async function handleGetPlans(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleCreatePlan(req: VercelRequest, res: VercelResponse) {
-  const { planId, name, amount, interval, recipientWallet, creatorAddress, userTier } = req.body
+  const { planId, name, amount, interval, recipientWallet, creatorAddress, userTier, description } = req.body
 
-  if (!planId || !name || !amount || !interval || !recipientWallet || !creatorAddress) {
+  if (!planId || !name || !amount || !interval || !recipientWallet || !creatorAddress || !description) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
@@ -227,6 +227,7 @@ async function handleCreatePlan(req: VercelRequest, res: VercelResponse) {
         amount: amount,
         interval,
         recipient_wallet: recipientWallet,
+        description,
         contract_address: CONTRACT_ADDRESS,
         contract_plan_id: planId
       })
@@ -254,9 +255,9 @@ async function handleCreatePlan(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleUpdatePlan(req: VercelRequest, res: VercelResponse) {
-  const { planId, name, amount, recipientWallet, creatorAddress } = req.body
+  const { planId, name, amount, recipientWallet, creatorAddress, description } = req.body
 
-  if (!planId || !name || !amount || !recipientWallet || !creatorAddress) {
+  if (!planId || !name || !amount || !recipientWallet || !creatorAddress || !description) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
 
@@ -276,6 +277,7 @@ async function handleUpdatePlan(req: VercelRequest, res: VercelResponse) {
         name,
         amount,
         recipient_wallet: recipientWallet,
+        description,
         updated_at: new Date().toISOString()
       })
       .eq('plan_id', planId)
