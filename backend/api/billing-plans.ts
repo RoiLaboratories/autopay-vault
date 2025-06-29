@@ -95,10 +95,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleGetPlans(req: VercelRequest, res: VercelResponse) {
-  const { creatorAddress } = req.query
+  const { creatorAddress, planId, public: isPublic } = req.query
 
+  // If planId is provided, get single plan (for subscription page)
+  if (planId) {
+    try {
+      const { data: plan, error } = await supabase
+        .from('billing_plans')
+        .select('*')
+        .eq('plan_id', planId)
+        .eq('is_active', true)
+        .single()
+
+      if (error || !plan) {
+        return res.status(404).json({ error: 'Plan not found or inactive' })
+      }
+
+      return res.status(200).json({ plan })
+    } catch (error) {
+      console.error('Database error:', error)
+      return res.status(500).json({ error: 'Failed to fetch plan' })
+    }
+  }
+
+  // If public=true, get all active plans (for public browsing)
+  if (isPublic === 'true') {
+    try {
+      const { data: plans, error } = await supabase
+        .from('billing_plans')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Database error:', error)
+        return res.status(500).json({ error: 'Failed to fetch plans' })
+      }
+
+      return res.status(200).json({ plans: plans || [] })
+    } catch (error) {
+      console.error('Database error:', error)
+      return res.status(500).json({ error: 'Failed to fetch plans' })
+    }
+  }
+
+  // Otherwise, get plans for creator (for dashboard)
   if (!creatorAddress) {
-    return res.status(400).json({ error: 'Creator address is required' })
+    return res.status(400).json({ error: 'Creator address, plan ID, or public=true is required' })
   }
 
   try {
