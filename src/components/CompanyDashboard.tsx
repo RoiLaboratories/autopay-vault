@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { BillingPlans } from './BillingPlans'
+import { BillingPlanForm } from './BillingPlanForm'
 
 interface Client {
   id: string
@@ -277,7 +278,16 @@ export const CompanyDashboard: React.FC = () => {
 
       {/* Billing Plans Tab */}
       {activeTab === 'plans' && (
-        <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Create New Billing Plan</CardTitle>
+              <CardDescription>Set up a new billing plan for your company</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BillingPlanForm onSuccess={() => {/* Optionally reload plans here */}} />
+            </CardContent>
+          </Card>
           <BillingPlans />
         </div>
       )}
