@@ -9,7 +9,7 @@ import type { BillingPlan } from './BillingPlans'
 interface BillingPlanModalProps {
   isOpen: boolean
   onClose: () => void
-  onSubmit: (planData: Omit<BillingPlan, 'id' | 'planId' | 'createdAt' | 'subscriptionLink' | 'companyWallet'>) => void
+  onSubmit: (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => void
   editingPlan?: BillingPlan | null
   currentWallet: string
 }
@@ -35,7 +35,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
         name: editingPlan.name,
         amount: editingPlan.amount.toString(),
         interval: editingPlan.interval,
-        recipientWallet: editingPlan.recipientWallet
+        recipientWallet: editingPlan.recipient_wallet
       })
     } else {
       setFormData({
@@ -80,7 +80,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
       name: formData.name.trim(),
       amount: Number(formData.amount),
       interval: formData.interval,
-      recipientWallet: formData.recipientWallet.trim()
+      recipient_wallet: formData.recipientWallet.trim()
     })
   }
 

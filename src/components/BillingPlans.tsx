@@ -21,14 +21,17 @@ import { billingPlanService } from '@/services/BillingPlanService'
 
 export interface BillingPlan {
   id: string
-  planId: string
+  plan_id: string
   name: string
   amount: number
   interval: 'monthly' | 'yearly'
-  recipientWallet: string
-  createdAt: string
-  subscriptionLink?: string
-  companyWallet?: string
+  recipient_wallet: string
+  creator_address: string
+  created_at: string
+  is_active: boolean
+  description?: string
+  max_subscribers?: number
+  contract_plan_id?: string
 }
 
 export const BillingPlans: React.FC = () => {
@@ -71,7 +74,10 @@ export const BillingPlans: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?creatorAddress=${address}`)
       const data = await response.json()
       
+      console.log('API Response:', data) // Debug log
+      
       if (response.ok) {
+        console.log('Plans loaded:', data.plans) // Debug log
         setPlans(data.plans || [])
       } else {
         console.error('Failed to load plans:', data.error)
@@ -86,7 +92,7 @@ export const BillingPlans: React.FC = () => {
     }
   }
 
-  const handleCreatePlan = async (planData: Omit<BillingPlan, 'id' | 'planId' | 'createdAt' | 'subscriptionLink' | 'companyWallet'>) => {
+  const handleCreatePlan = async (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => {
     const planLimit = getPlanLimits()
     
     if ((plans || []).length >= planLimit) {
@@ -131,7 +137,7 @@ export const BillingPlans: React.FC = () => {
     }
   }
 
-  const handleEditPlan = async (planData: Omit<BillingPlan, 'id' | 'planId' | 'createdAt' | 'subscriptionLink' | 'companyWallet'>) => {
+  const handleEditPlan = async (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => {
     if (!editingPlan) return
 
     try {
@@ -144,7 +150,7 @@ export const BillingPlans: React.FC = () => {
         },
         body: JSON.stringify({
           ...planData,
-          planId: editingPlan.planId,
+          planId: editingPlan.plan_id,
           creatorAddress: address
         }),
       })
@@ -191,14 +197,16 @@ export const BillingPlans: React.FC = () => {
   }
 
   const handleCopyLink = (planId: string) => {
+    console.log('Copying link for planId:', planId) // Debug log
     const subscriptionLink = `${window.location.origin}/subscribe/${planId}`
+    console.log('Generated subscription link:', subscriptionLink) // Debug log
     navigator.clipboard.writeText(subscriptionLink)
     toast.success('Subscription link copied to clipboard!')
   }
 
   const filteredPlans = (plans || []).filter(plan =>
     plan?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    plan?.recipientWallet?.toLowerCase().includes(searchTerm.toLowerCase())
+    plan?.recipient_wallet?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const formatInterval = (interval: string) => {
@@ -208,6 +216,15 @@ export const BillingPlans: React.FC = () => {
   const formatAddress = (address: string | undefined) => {
     if (!address) return 'Unknown address'
     return `${address.slice(0, 6)}...${address.slice(-4)}`
+  }
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return 'Unknown date'
+    try {
+      return new Date(dateString).toLocaleDateString()
+    } catch {
+      return 'Invalid date'
+    }
   }
 
   return (
@@ -272,7 +289,9 @@ export const BillingPlans: React.FC = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
-          {filteredPlans.map((plan) => (
+          {filteredPlans.map((plan) => {
+            console.log('Rendering plan:', plan) // Debug log
+            return (
             <Card key={plan.id} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -293,14 +312,14 @@ export const BillingPlans: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       disabled={loading}
-                      onClick={() => handleDeletePlan(plan.planId)}
+                      onClick={() => handleDeletePlan(plan.plan_id)}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
                 <CardDescription>
-                  Created {new Date(plan.createdAt).toLocaleDateString()}
+                  Created {new Date(plan.created_at).toLocaleDateString()}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -315,31 +334,37 @@ export const BillingPlans: React.FC = () => {
                     <span>{formatInterval(plan.interval)}</span>
                   </div>
                   <div className="flex items-center space-x-3">
+                    <Calendar className="w-4 h-4 text-gray-600" />
+                    <span className="text-sm">Created: {formatDate(plan.created_at)}</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
                     <Wallet className="w-4 h-4 text-purple-600" />
                     <span className="text-sm font-mono">
-                      {formatAddress(plan.recipientWallet)}
+                      {formatAddress(plan.recipient_wallet)}
                     </span>
                   </div>
                 </div>
 
                 {/* Subscription Link */}
-                <div className="pt-4 border-t">
+                  <div className="pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-2">Subscription Link:</p>
                   <div className="flex items-center space-x-2">
                     <div className="flex-1 bg-muted rounded p-2 text-sm font-mono truncate">
-                      {plan.subscriptionLink || `${window.location.origin}/subscribe/${plan.planId}`}
+                      {plan.plan_id ? `${window.location.origin}/subscribe/${plan.plan_id}` : 'Loading...'}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleCopyLink(plan.planId)}
+                      disabled={!plan.plan_id}
+                      onClick={() => handleCopyLink(plan.plan_id)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => window.open(plan.subscriptionLink || `${window.location.origin}/subscribe/${plan.planId}`, '_blank')}
+                      disabled={!plan.plan_id}
+                      onClick={() => plan.plan_id && window.open(`${window.location.origin}/subscribe/${plan.plan_id}`, '_blank')}
                     >
                       <ExternalLink className="w-4 h-4" />
                     </Button>
@@ -347,7 +372,8 @@ export const BillingPlans: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
 

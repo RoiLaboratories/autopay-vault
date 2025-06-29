@@ -6,16 +6,15 @@ import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { LandingPage } from '@/components/LandingPage'
 import { WalletConnect } from '@/components/WalletConnect'
 import { BillingPlanForm } from '@/components/BillingPlanForm'
-import { Dashboard } from '@/components/Dashboard'
 import { PricingPage } from '@/components/PricingPage'
 import { SubscriptionPage } from '@/components/SubscriptionPage'
-import { PlanBadge, FeatureGate } from '@/components/FeatureGate'
+import { PlanBadge } from '@/components/FeatureGate'
 import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
-import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard, Building2 } from 'lucide-react'
+import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard } from 'lucide-react'
 import { CompanyDashboard } from '@/components/CompanyDashboard'
 
-type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing' | 'company'
+type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing'
 
 function App() {
   return (
@@ -106,7 +105,7 @@ function MainApp() {
 
   // Handle wallet disconnection - redirect to landing if on a protected page
   useEffect(() => {
-    if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create' || currentPage === 'company')) {
+    if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create')) {
       console.log('Wallet disconnected, redirecting to landing')
       setCurrentPage('landing')
     }
@@ -171,14 +170,6 @@ function MainApp() {
                 <CreditCard className="w-4 h-4" />
                 <span>Pricing</span>
               </Button>
-              <Button
-                variant={currentPage === 'company' ? 'secondary' : 'ghost'}
-                onClick={() => setCurrentPage('company')}
-                className="flex items-center space-x-2"
-              >
-                <Building2 className="w-4 h-4" />
-                <span>Company</span>
-              </Button>
             </nav>
 
             {/* Wallet Info */}
@@ -229,15 +220,6 @@ function MainApp() {
                 <CreditCard className="w-4 h-4" />
                 <span className="text-xs">Pricing</span>
               </Button>
-              <Button
-                variant={currentPage === 'company' ? 'secondary' : 'ghost'}
-                onClick={() => setCurrentPage('company')}
-                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
-                size="sm"
-              >
-                <Building2 className="w-4 h-4" />
-                <span className="text-xs">Company</span>
-              </Button>
             </div>
           </div>
         </div>
@@ -284,8 +266,8 @@ function MainApp() {
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
             >
-              <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <Dashboard />
+              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <CompanyDashboard />
               </main>
             </motion.div>
           )}
@@ -313,40 +295,6 @@ function MainApp() {
               transition={{ duration: 0.3 }}
             >
               <PricingPage />
-            </motion.div>
-          )}
-
-          {currentPage === 'company' && isConnected && (
-            <motion.div
-              key="company"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <FeatureGate 
-                  feature="company_dashboard" 
-                  requiredPlan="pro"
-                  fallback={
-                    <div className="text-center py-20">
-                      <div className="w-16 h-16 mx-auto mb-6 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Building2 className="w-8 h-8 text-primary" />
-                      </div>
-                      <h1 className="text-3xl font-bold mb-4">Company Dashboard</h1>
-                      <p className="text-muted-foreground mb-6">
-                        Upgrade to Pro plan to access company features including team management, 
-                        advanced analytics, and bulk operations.
-                      </p>
-                      <Button onClick={() => setCurrentPage('pricing')} size="lg">
-                        Upgrade to Pro
-                      </Button>
-                    </div>
-                  }
-                >
-                  <CompanyDashboard />
-                </FeatureGate>
-              </main>
             </motion.div>
           )}
         </AnimatePresence>

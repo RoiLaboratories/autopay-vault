@@ -48,15 +48,31 @@ export const SubscriptionPage: React.FC = () => {
 
     try {
       setLoading(true)
-      const response = await fetch(`/api/billing-plans/${planId}`)
-      const data = await response.json()
+      
+      // Try to get the specific plan by ID first
+      let response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?planId=${planId}`)
+      let data = await response.json()
 
-      if (response.ok) {
+      if (response.ok && data.plan) {
         setPlan(data.plan)
-      } else {
-        toast.error('Plan not found or no longer available')
-        navigate('/')
+        return
       }
+      
+      // Fallback: get all public plans and find the one we need
+      response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?public=true`)
+      data = await response.json()
+      
+      if (response.ok && data.plans) {
+        const foundPlan = data.plans.find((p: BillingPlan) => p.plan_id === planId)
+        if (foundPlan) {
+          setPlan(foundPlan)
+          return
+        }
+      }
+      
+      // If still not found, show error
+      toast.error('Plan not found or no longer available')
+      navigate('/')
     } catch (error) {
       console.error('Error loading plan:', error)
       toast.error('Failed to load plan')
