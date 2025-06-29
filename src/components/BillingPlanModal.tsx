@@ -25,7 +25,8 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
     name: '',
     amount: '',
     interval: 'monthly' as 'monthly' | 'yearly',
-    recipientWallet: ''
+    recipientWallet: '',
+    creatorAddress: currentWallet || ''
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -35,14 +36,16 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
         name: editingPlan.name,
         amount: editingPlan.amount.toString(),
         interval: editingPlan.interval,
-        recipientWallet: editingPlan.recipient_wallet
+        recipientWallet: editingPlan.recipient_wallet,
+        creatorAddress: editingPlan.creator_address || currentWallet
       })
     } else {
       setFormData({
         name: '',
         amount: '',
         interval: 'monthly',
-        recipientWallet: currentWallet
+        recipientWallet: currentWallet,
+        creatorAddress: currentWallet
       })
     }
     setErrors({})
@@ -65,6 +68,12 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
       newErrors.recipientWallet = 'Please enter a valid Ethereum wallet address'
     }
 
+    if (!formData.creatorAddress.trim()) {
+      newErrors.creatorAddress = 'Creator address is required'
+    } else if (!formData.creatorAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+      newErrors.creatorAddress = 'Please enter a valid Ethereum wallet address'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -80,7 +89,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
       name: formData.name.trim(),
       amount: Number(formData.amount),
       interval: formData.interval,
-      recipient_wallet: formData.recipientWallet.trim()
+      recipient_wallet: formData.recipientWallet.trim(),
     })
   }
 
@@ -168,6 +177,22 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
             </p>
           </div>
 
+          {/* Creator Address */}
+          <div className="space-y-2">
+            <Label htmlFor="creatorAddress">Creator Address *</Label>
+            <Input
+              id="creatorAddress"
+              placeholder="0x..."
+              value={formData.creatorAddress}
+              onChange={(e) => handleInputChange('creatorAddress', e.target.value)}
+              className={errors.creatorAddress ? 'border-red-500' : ''}
+            />
+            {errors.creatorAddress && <p className="text-sm text-red-500">{errors.creatorAddress}</p>}
+            <p className="text-xs text-muted-foreground">
+              This is the wallet address of the plan creator (usually your connected wallet)
+            </p>
+          </div>
+
           {/* Preview */}
           {formData.name && formData.amount && (
             <Card className="bg-muted/50">
@@ -178,6 +203,7 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
                 <p><strong>Plan:</strong> {formData.name}</p>
                 <p><strong>Price:</strong> ${formData.amount} USDC {formData.interval}</p>
                 <p><strong>Recipient:</strong> {formData.recipientWallet.slice(0, 6)}...{formData.recipientWallet.slice(-4)}</p>
+                <p><strong>Creator:</strong> {formData.creatorAddress.slice(0, 6)}...{formData.creatorAddress.slice(-4)}</p>
               </CardContent>
             </Card>
           )}
