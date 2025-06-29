@@ -102,7 +102,6 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
       // Extended list of reliable RPC providers with different timeouts
       const rpcConfigs = [
         { url: 'https://mainnet.base.org', timeout: 8000 },
-        { url: 'https://base-mainnet.g.alchemy.com/v2/demo', timeout: 8000 },
         { url: 'https://1rpc.io/base', timeout: 10000 },
         { url: 'https://base.gateway.tenderly.co', timeout: 10000 },
         { url: 'https://base-mainnet.public.blastapi.io', timeout: 12000 },
@@ -328,7 +327,6 @@ export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ childr
     let readProvider = null
     const rpcUrls = [
       'https://mainnet.base.org',
-      'https://base-mainnet.g.alchemy.com/v2/demo',
       'https://1rpc.io/base'
     ]
     
