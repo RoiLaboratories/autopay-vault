@@ -104,8 +104,20 @@ export const BillingPlans: React.FC = () => {
       setLoading(true)
       
       const planId = `plan_${Date.now()}`
-      
-      // Create plan via API
+
+      // 1. Create plan on-chain first
+      if (!provider) throw new Error('Wallet provider not found')
+      await billingPlanService.initialize(provider)
+      await billingPlanService.createPlan(
+        planId,
+        planData.name,
+        planData.amount,
+        planData.interval,
+        planData.recipient_wallet
+      )
+      toast.success('Plan created on-chain!')
+
+      // 2. Then create plan in backend/database
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans`, {
         method: 'POST',
         headers: {
