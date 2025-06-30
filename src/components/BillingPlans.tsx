@@ -151,10 +151,10 @@ export const BillingPlans: React.FC = () => {
         },
         body: JSON.stringify({
           ...planData,
-          planId: editingPlan.plan_id
+          plan_id: editingPlan.plan_id
         }),
       })
-      console.log('handleEditPlan payload:', { ...planData, planId: editingPlan.plan_id }) // Debug log
+      console.log('handleEditPlan payload:', { ...planData, plan_id: editingPlan.plan_id }) // Debug log
 
       const data = await response.json()
 
