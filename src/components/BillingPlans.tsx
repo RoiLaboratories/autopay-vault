@@ -169,6 +169,10 @@ export const BillingPlans: React.FC = () => {
 
       const data = await response.json()
 
+      if (!response.ok) {
+        console.error('Backend error:', data.error); // Log backend error message
+      }
+
       if (response.ok) {
         await loadPlans()
         toast.success('Billing plan updated successfully!')
