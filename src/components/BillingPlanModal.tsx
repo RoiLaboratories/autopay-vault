@@ -99,14 +99,16 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
       return
     }
 
-    onSubmit({
+    const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
       amount: Number(formData.amount),
       interval: formData.interval,
       recipient_wallet: formData.recipientWallet.trim(),
       creator_address: formData.creatorAddress.trim()
-    })
+    }
+    console.log('BillingPlanModal submit payload:', payload)
+    onSubmit(payload)
   }
 
   const handleInputChange = (field: string, value: string) => {
