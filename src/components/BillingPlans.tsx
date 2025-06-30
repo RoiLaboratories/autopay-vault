@@ -150,13 +150,22 @@ export const BillingPlans: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...planData,
-          planId: editingPlan.plan_id, // Use camelCase for backend compatibility
-          creatorAddress: address, // Ensure creatorAddress is sent
-          description: planData.description || ''
+          planId: editingPlan.plan_id,
+          name: planData.name,
+          amount: planData.amount,
+          recipientWallet: planData.recipient_wallet,
+          creatorAddress: address, // Use address from context, not planData
+          description: planData.description
         }),
       })
-      console.log('handleEditPlan payload:', { ...planData, planId: editingPlan.plan_id, creatorAddress: address, description: planData.description || '' }) // Debug log
+      console.log('handleEditPlan payload:', {
+        planId: editingPlan.plan_id,
+        name: planData.name,
+        amount: planData.amount,
+        recipientWallet: planData.recipient_wallet,
+        creatorAddress: address,
+        description: planData.description
+      }) // Debug log
 
       const data = await response.json()
 
