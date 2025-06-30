@@ -154,6 +154,7 @@ export const BillingPlans: React.FC = () => {
           planId: editingPlan.plan_id
         }),
       })
+      console.log('handleEditPlan payload:', { ...planData, planId: editingPlan.plan_id }) // Debug log
 
       const data = await response.json()
 
@@ -319,8 +320,8 @@ export const BillingPlans: React.FC = () => {
                   </div>
                 </div>
                 <CardDescription>
-                  Created {new Date(plan.created_at).toLocaleDateString()}
-                </CardDescription>
+                  Created {new Date(plan.created_at).toLocaleDateString()
+                }</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Plan Details */}
