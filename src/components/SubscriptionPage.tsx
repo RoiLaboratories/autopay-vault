@@ -128,7 +128,7 @@ export const SubscriptionPage: React.FC = () => {
     try {
       const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
       const allowanceVal = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
-      setAllowance(allowanceVal)
+      setAllowance(BigInt(allowanceVal.toString())) // Always store as BigInt
     } catch (error) {
       setAllowance(0n)
     } finally {
@@ -348,16 +348,7 @@ export const SubscriptionPage: React.FC = () => {
                     <div className="text-xs text-gray-500 text-center">
                       Allowance: {allowance?.toString()} | Required: {ethers.parseUnits(plan.amount.toString(), 6).toString()}
                     </div>
-                    {(() => {
-                      let currentAllowance: bigint = 0n;
-                      try {
-                        currentAllowance = typeof allowance === 'bigint' ? allowance : BigInt(allowance || 0);
-                      } catch {
-                        currentAllowance = 0n;
-                      }
-                      const requiredAmount = ethers.parseUnits(plan.amount.toString(), 6);
-                      return currentAllowance < requiredAmount;
-                    })() ? (
+                    {allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
                       <Button
                         onClick={handleApprove}
                         disabled={subscribing || checkingAllowance}
@@ -370,9 +361,7 @@ export const SubscriptionPage: React.FC = () => {
                             Approving...
                           </>
                         ) : (
-                          <>
-                            Approve USDC
-                          </>
+                          <>Approve USDC</>
                         )}
                       </Button>
                     ) : (
