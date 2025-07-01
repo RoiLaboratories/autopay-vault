@@ -338,7 +338,7 @@ export const SubscriptionPage: React.FC = () => {
                         By subscribing, you authorize automatic {plan.interval} payments of ${plan.amount} USDC
                       </p>
                     </div>
-                    {allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
+                    {allowance !== undefined && allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
                       <Button
                         onClick={handleApprove}
                         disabled={subscribing || checkingAllowance}
