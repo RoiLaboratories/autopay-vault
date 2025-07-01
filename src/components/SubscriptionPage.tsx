@@ -338,6 +338,10 @@ export const SubscriptionPage: React.FC = () => {
                         By subscribing, you authorize automatic {plan.interval} payments of ${plan.amount} USDC
                       </p>
                     </div>
+                    {/* DEBUG: Show allowance and required amount for troubleshooting */}
+                    <div className="text-xs text-gray-500 text-center">
+                      Allowance: {allowance?.toString()} | Required: {ethers.parseUnits(plan.amount.toString(), 6).toString()}
+                    </div>
                     {typeof allowance === 'bigint' && allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
                       <Button
                         onClick={handleApprove}
