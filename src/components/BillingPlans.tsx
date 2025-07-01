@@ -124,8 +124,11 @@ export const BillingPlans: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...planData,
           planId,
+          name: planData.name,
+          amount: planData.amount,
+          interval: planData.interval,
+          recipientWallet: planData.recipient_wallet,
           creatorAddress: address,
           description: planData.description || '',
           userTier
