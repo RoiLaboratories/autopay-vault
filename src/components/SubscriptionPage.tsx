@@ -370,7 +370,9 @@ export const SubscriptionPage: React.FC = () => {
                             Approving...
                           </>
                         ) : (
-                          <>Approve USDC</>
+                          <>
+                            Approve USDC
+                          </>
                         )}
                       </Button>
                     ) : (
