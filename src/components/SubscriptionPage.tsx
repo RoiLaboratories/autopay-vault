@@ -4,7 +4,6 @@ import { motion } from 'framer-motion'
 import { DollarSign, Calendar, Wallet, Check, X, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useSubscription } from '@/contexts/SubscriptionContext'
 import { toast } from 'react-hot-toast'
 import { ethers } from 'ethers'
 
@@ -37,10 +36,27 @@ interface BillingPlan {
   created_at: string
 }
 
-export const SubscriptionPage: React.FC = () => {
+interface SubscriptionPageProps {
+  privyWallet: any | null;
+}
+
+export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet }) => {
   const { planId } = useParams<{ planId: string }>()
   const navigate = useNavigate()
-  const { address, provider } = useSubscription()
+  // Remove useSubscription context for address/provider
+  const address = privyWallet?.address || null;
+  // Use ethers.BrowserProvider for EIP-1193
+  const [provider, setProvider] = useState<any>(null);
+
+  useEffect(() => {
+    if (privyWallet && privyWallet.getEip1193Provider) {
+      const ethersProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider());
+      setProvider(ethersProvider);
+    } else {
+      setProvider(null);
+    }
+  }, [privyWallet]);
+
   const [plan, setPlan] = useState<BillingPlan | null>(null)
   const [loading, setLoading] = useState(true)
   const [subscribing, setSubscribing] = useState(false)
@@ -141,7 +157,9 @@ export const SubscriptionPage: React.FC = () => {
     try {
       setSubscribing(true)
       const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
-      const signer = await provider.getSigner()
+      // Use BrowserProvider for EIP-1193
+      const browserProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider())
+      const signer = await browserProvider.getSigner()
       const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
       // Some USDC tokens require setting allowance to 0 before updating
       const currentAllowance = await usdcWithSigner.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
@@ -180,7 +198,8 @@ export const SubscriptionPage: React.FC = () => {
         return
       }
       // 3. Subscribe
-      const signer = await provider.getSigner()
+      const browserProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider())
+      const signer = await browserProvider.getSigner()
       const contractWithSigner = new ethers.Contract(BILLING_PLAN_MANAGER_ADDRESS, BILLING_PLAN_MANAGER_ABI, signer)
       const tx = await contractWithSigner.subscribe(planId)
       await tx.wait()

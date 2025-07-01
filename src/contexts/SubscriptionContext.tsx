@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
-import { useWallet } from '@/hooks/useWallet'
 import { ethers } from 'ethers'
 
 export type PlanTier = 'free' | 'pro' | 'enterprise'
@@ -68,14 +67,18 @@ const USDC_ABI = [
 
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
 
-export const SubscriptionProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { address, ethereum } = useWallet()
+export const SubscriptionProvider: React.FC<{ children: ReactNode, privyWallet?: any }> = ({ children, privyWallet }) => {
   const [currentPlan, setCurrentPlan] = useState<PlanTier>('free')
   const [isActive, setIsActive] = useState(false)
   const [expiryDate, setExpiryDate] = useState<Date | null>(null)
   const [daysRemaining, setDaysRemaining] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null)
+
+  // Removed useWallet import and all usage of address/ethereum from SubscriptionProvider
+  // Use Privy hooks and wallet state instead. You may need to pass privyWallet/evmWallet from App/MainApp as a prop.
+  const address = privyWallet?.address || null;
+  const ethereum = privyWallet?.getEip1193Provider ? privyWallet.getEip1193Provider() : null;
 
   // Initialize provider when ethereum is available
   useEffect(() => {

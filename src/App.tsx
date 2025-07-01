@@ -17,11 +17,13 @@ import { CompanyDashboard } from '@/components/CompanyDashboard'
 type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing'
 
 function App() {
+  const { wallets } = useWallets();
+  const connectedWallet = wallets[0] || null;
   return (
     <Router>
       <SubscriptionProvider>
         <Routes>
-          <Route path="/subscribe/:planId" element={<SubscriptionPage />} />
+          <Route path="/subscribe/:planId" element={<SubscriptionPage privyWallet={connectedWallet} />} />
           <Route path="/*" element={<MainApp />} />
         </Routes>
         <Toaster
@@ -47,16 +49,26 @@ function App() {
 }
 
 function MainApp() {
-  const [currentPage, setCurrentPage] = useState<AppState>('landing')
-  const { ready, login, logout } = usePrivy() // removed 'user' since it's unused
-  const { wallets } = useWallets()
-  const connectedWallet = wallets[0] || null
-  const isConnected = !!connectedWallet
-  const address = connectedWallet?.address || null
-
-  if (!ready) {
-    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
-  }
+  // All hooks must be at the top, before any logic or return
+  const [currentPage, setCurrentPage] = useState<AppState>('landing');
+  const privy = usePrivy() as any;
+  const ready = privy.ready;
+  const login = privy.login;
+  const logout = privy.logout;
+  const user = privy.user;
+  const link = privy.link;
+  const { wallets } = useWallets();
+  // Select the first EVM-compatible wallet (MetaMask, WalletConnect, Coinbase, etc.) that is NOT the embedded Privy wallet
+  const evmWallet = wallets.find((w: any) =>
+    w.walletClientType !== 'privy' &&
+    typeof w.getEip1193Provider === 'function' &&
+    w.getEip1193Provider?.()
+  ) || null;
+  // Fallback: use embedded Privy wallet if no EVM wallet is present
+  const embeddedWallet = wallets.find((w: any) => w.walletClientType === 'privy') || null;
+  const activeWallet = evmWallet || embeddedWallet;
+  const isConnected = !!activeWallet;
+  const address = activeWallet?.address || null;
 
   // Debug logging for state changes
   useEffect(() => {
@@ -103,21 +115,26 @@ function MainApp() {
 
   // Auto-redirect to dashboard if wallet is connected and we're on the wallet page
   useEffect(() => {
-    console.log('Navigation effect triggered:', { currentPage, isConnected, address })
-    
     if (currentPage === 'wallet' && isConnected && address) {
-      console.log('Auto-redirecting to dashboard after wallet connection')
-      setCurrentPage('dashboard')
+      setCurrentPage('dashboard');
     }
   }, [currentPage, isConnected, address])
 
   // Handle wallet disconnection - redirect to landing if on a protected page
   useEffect(() => {
-    if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create')) {
-      console.log('Wallet disconnected, redirecting to landing')
-      setCurrentPage('landing')
+    let didLogout = false;
+    if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create') && user && typeof logout === 'function') {
+      (async () => {
+        if (!didLogout) {
+          console.log('Wallet disconnected, redirecting to landing and logging out')
+          didLogout = true;
+          await logout();
+          setCurrentPage('landing');
+        }
+      })();
     }
-  }, [isConnected, currentPage])
+    // No cleanup needed
+  }, [isConnected, currentPage, logout, user])
 
   // Listen for navigation events from feature gates
   useEffect(() => {
@@ -218,6 +235,20 @@ function MainApp() {
     )
   }
 
+  // Only render after all hooks
+  if (!ready) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
+
+  // Helper to open Privy modal as needed
+  const handleConnectWallet = () => {
+    if (!user) {
+      login();
+    } else if (typeof link === 'function') {
+      link();
+    }
+  };
+
   const renderContent = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -244,8 +275,19 @@ function MainApp() {
               className="min-h-screen flex items-center justify-center p-4"
             >
               <div className="w-full max-w-md">
-                {/* Use Privy login button */}
-                <Button onClick={login} className="w-full" size="lg">Connect Wallet</Button>
+                <div className="bg-background/90 rounded-2xl shadow-xl border border-border p-8 flex flex-col items-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4">
+                    <Wallet className="w-8 h-8 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-2">Connect Your Wallet</h2>
+                  <p className="text-muted-foreground mb-6 text-center">
+                    Securely connect your wallet to manage subscriptions and payments.
+                  </p>
+                  <Button onClick={handleConnectWallet} className="w-full" size="lg">
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Connect Wallet
+                  </Button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -259,7 +301,7 @@ function MainApp() {
               transition={{ duration: 0.3 }}
             >
               <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <CompanyDashboard />
+                <CompanyDashboard privyWallet={activeWallet} />
               </main>
             </motion.div>
           )}

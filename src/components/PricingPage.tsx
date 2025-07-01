@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { useWallet } from '@/hooks/useWallet'
 import toast from 'react-hot-toast'
 
 interface PricingTier {
@@ -85,14 +84,8 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
   const [months, setMonths] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const { subscribe } = useSubscription()
-  const { isConnected } = useWallet()
 
   const handleSubscribe = async () => {
-    if (!isConnected) {
-      toast.error('Please connect your wallet first')
-      return
-    }
-
     setIsLoading(true)
     try {
       await subscribe(months)
@@ -188,7 +181,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
             <Button
               onClick={handleSubscribe}
               className="flex-1"
-              disabled={isLoading || !isConnected}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
@@ -205,7 +198,6 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose, 
 export const PricingPage = () => {
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null)
   const { currentPlan, isActive } = useSubscription()
-  const { isConnected } = useWallet()
 
   const handleTierSelect = (tier: PricingTier) => {
     if (tier.id === 'free') {
@@ -215,11 +207,6 @@ export const PricingPage = () => {
     
     if (tier.id === 'enterprise') {
       window.open('mailto:sales@autopayvault.com?subject=Enterprise%20Plan%20Inquiry', '_blank')
-      return
-    }
-
-    if (!isConnected) {
-      toast.error('Please connect your wallet to subscribe')
       return
     }
 

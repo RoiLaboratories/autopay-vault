@@ -29,7 +29,7 @@ interface Client {
   lastPayment: string
 }
 
-export const CompanyDashboard: React.FC = () => {
+export const CompanyDashboard: React.FC<{ privyWallet?: any }> = ({ privyWallet }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -260,7 +260,7 @@ export const CompanyDashboard: React.FC = () => {
       {activeTab === 'plans' && (
         <div className="max-h-[calc(100vh-200px)] overflow-y-auto space-y-6">
           {/* Remove the always-visible BillingPlanForm here, only show BillingPlans (which handles modal) */}
-          <BillingPlans />
+          {privyWallet && <BillingPlans privyWallet={privyWallet} />}
         </div>
       )}
 

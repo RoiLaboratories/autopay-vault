@@ -61,6 +61,14 @@ export const BillingPlanModal: React.FC<BillingPlanModalProps> = ({
     setErrors({})
   }, [editingPlan, currentWallet, isOpen])
 
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      creatorAddress: currentWallet || '',
+      recipientWallet: currentWallet || '',
+    }))
+  }, [currentWallet])
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 

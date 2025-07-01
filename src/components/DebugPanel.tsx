@@ -1,6 +1,5 @@
 import React from 'react'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ethers } from 'ethers'
@@ -16,8 +15,6 @@ export const DebugPanel: React.FC = () => {
     testContractConnectivity
   } = useSubscription()
   
-  const { ethereum } = useWallet()
-
   const handleTestConnectivity = async () => {
     console.log('Testing contract connectivity...')
     const result = await testContractConnectivity()
@@ -67,47 +64,6 @@ export const DebugPanel: React.FC = () => {
     } catch (error: any) {
       console.error('USDC test failed:', error)
       alert(`USDC Contract Test Failed: ${error.message}`)
-      return false
-    }
-  }
-
-  const handleTestWallet = async () => {
-    console.log('Testing wallet connectivity and network...')
-    try {
-      if (!ethereum) {
-        alert('No wallet detected')
-        return false
-      }
-
-      const provider = new ethers.BrowserProvider(ethereum)
-      const network = await provider.getNetwork()
-      const signer = await provider.getSigner()
-      const signerAddress = await signer.getAddress()
-      
-      console.log('Wallet test results:')
-      console.log('Network:', network.chainId, network.name)
-      console.log('Address:', signerAddress)
-      
-      // Test USDC contract through wallet
-      const usdcContract = new ethers.Contract(
-        '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-        ['function balanceOf(address) view returns (uint256)'],
-        signer
-      )
-      
-      const balance = await usdcContract.balanceOf(signerAddress)
-      console.log('USDC balance via wallet:', balance.toString())
-      
-      alert(`Wallet Test Results:
-Network: ${network.name} (Chain ID: ${network.chainId})
-Address: ${signerAddress}
-USDC Balance: ${ethers.formatUnits(balance, 6)} USDC
-${network.chainId === 8453n ? '✅ Correct network (Base)' : '❌ Wrong network - switch to Base'}`)
-      
-      return network.chainId === 8453n
-    } catch (error: any) {
-      console.error('Wallet test failed:', error)
-      alert(`Wallet Test Failed: ${error.message}`)
       return false
     }
   }
@@ -166,13 +122,6 @@ ${network.chainId === 8453n ? '✅ Correct network (Base)' : '❌ Wrong network 
             size="sm"
           >
             Test USDC
-          </Button>
-          <Button 
-            onClick={handleTestWallet}
-            variant="outline"
-            size="sm"
-          >
-            Test Wallet
           </Button>
         </div>
         

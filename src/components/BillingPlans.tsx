@@ -15,9 +15,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { BillingPlanModal } from './BillingPlanModal'
-import { useSubscription } from '@/contexts/SubscriptionContext'
 import { toast } from 'react-hot-toast'
 import { billingPlanService } from '@/services/BillingPlanService'
+import { useSubscription } from '@/contexts/SubscriptionContext'
 
 export interface BillingPlan {
   id: string
@@ -34,13 +34,33 @@ export interface BillingPlan {
   contract_plan_id?: string
 }
 
-export const BillingPlans: React.FC = () => {
+export const BillingPlans: React.FC<{ privyWallet?: any }> = ({ privyWallet }) => {
+  const { userTier } = useSubscription();
   const [plans, setPlans] = useState<BillingPlan[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [editingPlan, setEditingPlan] = useState<BillingPlan | null>(null)
   const [loading, setLoading] = useState(false)
-  const { userTier, address, provider } = useSubscription()
+  // Remove useSubscription, use privyWallet for address/provider
+  const address = privyWallet?.address || null;
+  const [provider, setProvider] = useState<any>(null);
+
+  useEffect(() => {
+    console.log('BillingPlans: privyWallet', privyWallet);
+    if (privyWallet && privyWallet.getEip1193Provider) {
+      const eipProvider = privyWallet.getEip1193Provider();
+      console.log('BillingPlans: eipProvider', eipProvider);
+      if (eipProvider) {
+        setProvider(new (require('ethers').BrowserProvider)(eipProvider));
+      } else {
+        setProvider(null);
+        console.warn('No EIP-1193 provider found. This wallet may not support on-chain transactions.');
+      }
+    } else {
+      setProvider(null);
+      console.warn('privyWallet is missing or does not have getEip1193Provider.');
+    }
+  }, [privyWallet])
 
   // Plan limits based on user tier
   const getPlanLimits = () => {
@@ -94,7 +114,10 @@ export const BillingPlans: React.FC = () => {
 
   const handleCreatePlan = async (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => {
     const planLimit = getPlanLimits()
-    
+    if (!provider) {
+      toast.error('Please connect your wallet before creating a plan.')
+      return
+    }
     if ((plans || []).length >= planLimit) {
       toast.error(`Plan limit exceeded. ${userTier === 'free' ? 'Upgrade to Pro' : 'Contact support'} for more plans.`)
       return
@@ -265,6 +288,17 @@ export const BillingPlans: React.FC = () => {
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
+      {/* Show warning if provider is missing */}
+      {!provider && (
+        <Card className="mb-4 border-red-500 border">
+          <CardContent className="flex flex-col items-center justify-center py-4">
+            <p className="text-red-600 font-semibold text-center">
+              Your connected wallet does not support on-chain transactions.<br />
+              Please connect a MetaMask, WalletConnect, or other on-chain wallet to create billing plans.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -279,7 +313,8 @@ export const BillingPlans: React.FC = () => {
           </div>
           <Button 
             onClick={() => setIsModalOpen(true)}
-            disabled={(plans || []).length >= getPlanLimits() || loading}
+            disabled={!provider || (plans || []).length >= getPlanLimits() || loading}
+            title={!provider ? 'Connect an on-chain wallet to create plans' : undefined}
           >
             <Plus className="w-4 h-4 mr-2" />
             Create Plan
@@ -411,10 +446,7 @@ export const BillingPlans: React.FC = () => {
       {/* Plan Creation Modal */}
       <BillingPlanModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setEditingPlan(null)
-        }}
+        onClose={() => setIsModalOpen(false)}
         onSubmit={editingPlan ? handleEditPlan : handleCreatePlan}
         editingPlan={editingPlan}
         currentWallet={address || ''}
