@@ -46,6 +46,8 @@ export const SubscriptionPage: React.FC = () => {
   const [subscribing, setSubscribing] = useState(false)
   const [usdcBalance, setUsdcBalance] = useState<string>('0')
   const [isAlreadySubscribed, setIsAlreadySubscribed] = useState(false)
+  const [allowance, setAllowance] = useState<bigint>(0n)
+  const [checkingAllowance, setCheckingAllowance] = useState(false)
 
   useEffect(() => {
     if (planId) {
@@ -57,10 +59,12 @@ export const SubscriptionPage: React.FC = () => {
     if (provider && address && planId) {
       checkUsdcBalance()
       checkExistingSubscription()
+      checkAllowance()
     } else {
       // Reset state when wallet disconnects
       setUsdcBalance('0')
       setIsAlreadySubscribed(false)
+      setAllowance(0n)
     }
   }, [provider, address, planId])
 
@@ -118,6 +122,38 @@ export const SubscriptionPage: React.FC = () => {
     }
   }
 
+  const checkAllowance = async () => {
+    if (!address || !provider) return
+    setCheckingAllowance(true)
+    try {
+      const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
+      const allowanceVal = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      setAllowance(allowanceVal)
+    } catch (error) {
+      setAllowance(0n)
+    } finally {
+      setCheckingAllowance(false)
+    }
+  }
+
+  const handleApprove = async () => {
+    if (!plan || !address || !provider) return
+    try {
+      setSubscribing(true)
+      const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
+      const signer = await provider.getSigner()
+      const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+      const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
+      await approveTx.wait()
+      toast.success('USDC approved!')
+      await checkAllowance()
+    } catch (error: any) {
+      toast.error(error.message || 'USDC approval failed')
+    } finally {
+      setSubscribing(false)
+    }
+  }
+
   const handleSubscribe = async () => {
     if (!plan || !address || !planId || !provider) return
     try {
@@ -131,21 +167,11 @@ export const SubscriptionPage: React.FC = () => {
         setSubscribing(false)
         return
       }
-      // 2. Check allowance
-      let allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      // 2. Check allowance (should be enough now)
       if (allowance < planAmount) {
-        // Approve USDC
-        const signer = await provider.getSigner()
-        const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-        const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
-        await approveTx.wait()
-        // Re-check allowance after approval
-        allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
-        if (allowance < planAmount) {
-          toast.error('USDC approval failed or not confirmed. Please try again.')
-          setSubscribing(false)
-          return
-        }
+        toast.error('Please approve USDC before subscribing.')
+        setSubscribing(false)
+        return
       }
       // 3. Subscribe
       const signer = await provider.getSigner()
@@ -166,7 +192,6 @@ export const SubscriptionPage: React.FC = () => {
         toast.error(data.error || 'Failed to create subscription record')
       }
     } catch (error: any) {
-      console.error('Subscription error:', error)
       toast.error(error.message || 'Failed to subscribe to plan')
     } finally {
       setSubscribing(false)
@@ -313,26 +338,42 @@ export const SubscriptionPage: React.FC = () => {
                         By subscribing, you authorize automatic {plan.interval} payments of ${plan.amount} USDC
                       </p>
                     </div>
-
-                    <Button
-                      onClick={handleSubscribe}
-                      disabled={subscribing}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {subscribing ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Subscribing...
-                        </>
-                      ) : (
-                        <>
-                          <Check className="h-4 w-4 mr-2" />
-                          Subscribe for ${plan.amount} USDC/{plan.interval}
-                        </>
-                      )}
-                    </Button>
-
+                    {allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
+                      <Button
+                        onClick={handleApprove}
+                        disabled={subscribing || checkingAllowance}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {subscribing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Approving...
+                          </>
+                        ) : (
+                          <>Approve USDC</>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSubscribe}
+                        disabled={subscribing}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {subscribing ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Subscribing...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-4 w-4 mr-2" />
+                            Subscribe for ${plan.amount} USDC/{plan.interval}
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <p className="text-xs text-gray-500 text-center">
                       This will create an on-chain subscription and process the first payment immediately.
                     </p>
