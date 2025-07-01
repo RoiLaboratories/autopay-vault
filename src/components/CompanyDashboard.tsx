@@ -42,6 +42,7 @@ export const CompanyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Real stats state (replace mock data)
   const [stats, setStats] = useState({
@@ -72,6 +73,21 @@ export const CompanyDashboard: React.FC = () => {
       clearInterval(interval)
     }
   }, [])
+
+  // Manual refresh handler
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      const res = await fetch('/api/company-dashboard-stats')
+      if (!res.ok) throw new Error('Failed to fetch stats')
+      const data = await res.json()
+      setStats(data)
+    } catch (err) {
+      // Optionally handle error
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   // Mock data - replace with real data from your API
   const mockClients: Client[] = [
@@ -171,7 +187,11 @@ export const CompanyDashboard: React.FC = () => {
             </p>
           </div>
         </div>
-      </div> 
+        <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+          <Activity className="w-4 h-4 mr-2" />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
 
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
@@ -298,7 +318,6 @@ export const CompanyDashboard: React.FC = () => {
       {/* Clients Tab */}
       {activeTab === 'clients' && (
         <div className="space-y-6">
-          {/* Filters */}
           <div className="flex items-center space-x-4">
             <div className="flex-1 max-w-sm">
               <Input
@@ -319,8 +338,6 @@ export const CompanyDashboard: React.FC = () => {
               <option value="pending">Pending</option>
             </select>
           </div>
-
-          {/* Clients Table */}
           <Card>
             <CardHeader>
               <CardTitle>Client Management</CardTitle>
