@@ -143,6 +143,12 @@ export const SubscriptionPage: React.FC = () => {
       const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
       const signer = await provider.getSigner()
       const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+      // Some USDC tokens require setting allowance to 0 before updating
+      const currentAllowance = await usdcWithSigner.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      if (currentAllowance > 0n) {
+        const tx0 = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, 0)
+        await tx0.wait()
+      }
       const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
       await approveTx.wait()
       toast.success('USDC approved!')
@@ -361,7 +367,7 @@ export const SubscriptionPage: React.FC = () => {
                     ) : (
                       <Button
                         onClick={handleSubscribe}
-                        disabled={subscribing}
+                        disabled={subscribing || (typeof allowance === 'bigint' && allowance < ethers.parseUnits(plan.amount.toString(), 6))}
                         className="w-full"
                         size="lg"
                       >
