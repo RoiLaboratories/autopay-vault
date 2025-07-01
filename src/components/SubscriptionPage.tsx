@@ -128,14 +128,20 @@ export const SubscriptionPage: React.FC = () => {
         return
       }
       // 2. Check allowance
-      const allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      let allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
       if (allowance < planAmount) {
         // Approve USDC
         const signer = await provider.getSigner()
-        // Use the USDC contract with the signer for approval
         const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
         const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
         await approveTx.wait()
+        // Re-check allowance after approval
+        allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+        if (allowance < planAmount) {
+          toast.error('USDC approval failed or not confirmed. Please try again.')
+          setSubscribing(false)
+          return
+        }
       }
       // 3. Subscribe
       const signer = await provider.getSigner()
