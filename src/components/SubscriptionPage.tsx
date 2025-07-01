@@ -57,6 +57,10 @@ export const SubscriptionPage: React.FC = () => {
     if (provider && address && planId) {
       checkUsdcBalance()
       checkExistingSubscription()
+    } else {
+      // Reset state when wallet disconnects
+      setUsdcBalance('0')
+      setIsAlreadySubscribed(false)
     }
   }, [provider, address, planId])
 
