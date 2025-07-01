@@ -5,8 +5,26 @@ import { DollarSign, Calendar, Wallet, Check, X, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useSubscription } from '@/contexts/SubscriptionContext'
-import { billingPlanService } from '@/services/BillingPlanService'
 import { toast } from 'react-hot-toast'
+import { ethers } from 'ethers'
+
+// BillingPlanManager contract ABI (minimal for subscribe, hasActiveSubscription, getPlan)
+const BILLING_PLAN_MANAGER_ABI = [
+  'function subscribe(string _planId) external',
+  'function hasActiveSubscription(address _user, string _planId) external view returns (bool)',
+  'function getPlan(string _planId) external view returns (tuple(string planId, address creator, string name, uint256 amount, uint256 interval, address recipientWallet, bool isActive, uint256 createdAt))'
+]
+
+// USDC ABI (minimal)
+const USDC_ABI = [
+  'function balanceOf(address account) external view returns (uint256)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function approve(address spender, uint256 amount) external returns (bool)'
+]
+
+// Set these from your .env or config
+const BILLING_PLAN_MANAGER_ADDRESS = import.meta.env.VITE_BILLING_PLAN_MANAGER_ADDRESS || ''
+const USDC_ADDRESS = import.meta.env.VITE_USDC_CONTRACT_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 
 interface BillingPlan {
   id: string
@@ -36,32 +54,26 @@ export const SubscriptionPage: React.FC = () => {
   }, [planId])
 
   useEffect(() => {
-    if (provider && address) {
-      billingPlanService.initialize(provider)
+    if (provider && address && planId) {
       checkUsdcBalance()
       checkExistingSubscription()
     }
-  }, [provider, address, plan])
+  }, [provider, address, planId])
 
   const loadPlan = async () => {
     if (!planId) return
-
     try {
       setLoading(true)
-      
       // Try to get the specific plan by ID first
       let response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?planId=${planId}`)
       let data = await response.json()
-
       if (response.ok && data.plan) {
         setPlan(data.plan)
         return
       }
-      
       // Fallback: get all public plans and find the one we need
       response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans?public=true`)
       data = await response.json()
-      
       if (response.ok && data.plans) {
         const foundPlan = data.plans.find((p: BillingPlan) => p.plan_id === planId)
         if (foundPlan) {
@@ -69,8 +81,6 @@ export const SubscriptionPage: React.FC = () => {
           return
         }
       }
-      
-      // If still not found, show error
       toast.error('Plan not found or no longer available')
       navigate('/')
     } catch (error) {
@@ -83,54 +93,61 @@ export const SubscriptionPage: React.FC = () => {
   }
 
   const checkUsdcBalance = async () => {
-    if (!address) return
-
+    if (!address || !provider) return
     try {
-      const balance = await billingPlanService.getUsdcBalance(address)
-      setUsdcBalance(balance)
+      const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
+      const balance = await usdc.balanceOf(address)
+      setUsdcBalance(ethers.formatUnits(balance, 6))
     } catch (error) {
       console.error('Error checking USDC balance:', error)
     }
   }
 
   const checkExistingSubscription = async () => {
-    if (!address || !planId) return
-
+    if (!address || !planId || !provider) return
     try {
-      const hasSubscription = await billingPlanService.hasActiveSubscription(address, planId)
-      setIsAlreadySubscribed(hasSubscription)
+      const contract = new ethers.Contract(BILLING_PLAN_MANAGER_ADDRESS, BILLING_PLAN_MANAGER_ABI, provider)
+      const result = await contract.hasActiveSubscription(address, planId)
+      setIsAlreadySubscribed(result)
     } catch (error) {
       console.error('Error checking subscription:', error)
     }
   }
 
   const handleSubscribe = async () => {
-    if (!plan || !address || !planId) return
-
-    if (parseFloat(usdcBalance) < plan.amount) {
-      toast.error('Insufficient USDC balance')
-      return
-    }
-
+    if (!plan || !address || !planId || !provider) return
     try {
       setSubscribing(true)
-
-      // Subscribe on-chain
-      const { txHash } = await billingPlanService.subscribe(planId)
-
-      // Create subscription in database
+      // 1. Check USDC balance
+      const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
+      const balance = await usdc.balanceOf(address)
+      const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
+      if (balance < planAmount) {
+        toast.error('Insufficient USDC balance')
+        setSubscribing(false)
+        return
+      }
+      // 2. Check allowance
+      const allowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      if (allowance < planAmount) {
+        // Approve USDC
+        const signer = await provider.getSigner()
+        // Use the USDC contract with the signer for approval
+        const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
+        const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
+        await approveTx.wait()
+      }
+      // 3. Subscribe
+      const signer = await provider.getSigner()
+      const contractWithSigner = new ethers.Contract(BILLING_PLAN_MANAGER_ADDRESS, BILLING_PLAN_MANAGER_ABI, signer)
+      const tx = await contractWithSigner.subscribe(planId)
+      await tx.wait()
+      // 4. Update backend (optional, if you want to record in DB)
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/plan-subscriptions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          planId,
-          subscriberAddress: address,
-          transactionHash: txHash
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, subscriberAddress: address, transactionHash: tx.hash })
       })
-
       if (response.ok) {
         toast.success('Successfully subscribed to plan!')
         setIsAlreadySubscribed(true)
