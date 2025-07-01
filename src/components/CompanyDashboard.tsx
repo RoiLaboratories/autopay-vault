@@ -29,15 +29,6 @@ interface Client {
   lastPayment: string
 }
 
-interface TeamMember {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'manager' | 'viewer'
-  joinDate: string
-  lastActive: string
-}
-
 export const CompanyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
@@ -52,16 +43,32 @@ export const CompanyDashboard: React.FC = () => {
     totalSubscriptions: 0
   })
 
+  const [clients, setClients] = useState<Client[]>([])
+  const [recentActivity, setRecentActivity] = useState<any[]>([])
+
   // Polling for real-time stats
   useEffect(() => {
     let isMounted = true
     const fetchStats = async () => {
       try {
-        // Replace with your backend API endpoint for dashboard stats
         const res = await fetch('/api/company-dashboard-stats')
         if (!res.ok) throw new Error('Failed to fetch stats')
         const data = await res.json()
         if (isMounted) setStats(data)
+
+        // Fetch clients
+        const clientsRes = await fetch('/api/company-dashboard-clients')
+        if (clientsRes.ok) {
+          const clientsData = await clientsRes.json()
+          if (isMounted) setClients(clientsData.clients || [])
+        }
+
+        // Fetch recent activity
+        const activityRes = await fetch('/api/company-dashboard-activity')
+        if (activityRes.ok) {
+          const activityData = await activityRes.json()
+          if (isMounted) setRecentActivity(activityData.activities || [])
+        }
       } catch (err) {
         // Optionally handle error
       }
@@ -82,65 +89,26 @@ export const CompanyDashboard: React.FC = () => {
       if (!res.ok) throw new Error('Failed to fetch stats')
       const data = await res.json()
       setStats(data)
+
+      // Fetch clients
+      const clientsRes = await fetch('/api/company-dashboard-clients')
+      if (clientsRes.ok) {
+        const clientsData = await clientsRes.json()
+        setClients(clientsData.clients || [])
+      }
+
+      // Fetch recent activity
+      const activityRes = await fetch('/api/company-dashboard-activity')
+      if (activityRes.ok) {
+        const activityData = await activityRes.json()
+        setRecentActivity(activityData.activities || [])
+      }
     } catch (err) {
       // Optionally handle error
     } finally {
       setIsRefreshing(false)
     }
   }
-
-  // Mock data - replace with real data from your API
-  const mockClients: Client[] = [
-    {
-      id: '1',
-      name: 'Acme Corporation',
-      email: 'billing@acme.com',
-      status: 'active',
-      subscriptions: 5,
-      monthlyValue: 250.00,
-      joinDate: '2024-01-15',
-      lastPayment: '2024-06-01'
-    },
-    {
-      id: '2',
-      name: 'TechStart Inc',
-      email: 'finance@techstart.io',
-      status: 'active',
-      subscriptions: 3,
-      monthlyValue: 150.00,
-      joinDate: '2024-02-20',
-      lastPayment: '2024-06-05'
-    },
-    {
-      id: '3',
-      name: 'Global Solutions Ltd',
-      email: 'payments@globalsol.com',
-      status: 'pending',
-      subscriptions: 0,
-      monthlyValue: 0,
-      joinDate: '2024-06-25',
-      lastPayment: 'Never'
-    }
-  ]
-
-  const mockTeamMembers: TeamMember[] = [
-    {
-      id: '1',
-      name: 'John Admin',
-      email: 'john@company.com',
-      role: 'admin',
-      joinDate: '2024-01-01',
-      lastActive: '2024-06-28'
-    },
-    {
-      id: '2',
-      name: 'Sarah Manager',
-      email: 'sarah@company.com',
-      role: 'manager',
-      joinDate: '2024-02-15',
-      lastActive: '2024-06-27'
-    }
-  ]
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -151,16 +119,7 @@ export const CompanyDashboard: React.FC = () => {
     }
   }
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'text-purple-600 bg-purple-100'
-      case 'manager': return 'text-blue-600 bg-blue-100'
-      case 'viewer': return 'text-gray-600 bg-gray-100'
-      default: return 'text-gray-600 bg-gray-100'
-    }
-  }
-
-  const filteredClients = mockClients.filter(client => {
+  const filteredClients = clients.filter(client => {
     const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || client.status === statusFilter
@@ -277,30 +236,20 @@ export const CompanyDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="font-medium">New client subscription</p>
-                    <p className="text-sm text-muted-foreground">Acme Corporation subscribed to Premium plan</p>
-                  </div>
-                  <span className="text-sm text-muted-foreground">2 hours ago</span>
-                </div>
-                <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="font-medium">Payment received</p>
-                    <p className="text-sm text-muted-foreground">TechStart Inc payment of $150.00 processed</p>
-                  </div>
-                  <span className="text-sm text-muted-foreground">5 hours ago</span>
-                </div>
-                <div className="flex items-center space-x-4 p-4 border rounded-lg">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="font-medium">Client registration</p>
-                    <p className="text-sm text-muted-foreground">Global Solutions Ltd registered for trial</p>
-                  </div>
-                  <span className="text-sm text-muted-foreground">1 day ago</span>
-                </div>
+                {recentActivity.length === 0 ? (
+                  <div className="text-center text-muted-foreground">No recent activity</div>
+                ) : (
+                  recentActivity.map((activity, idx) => (
+                    <div key={idx} className="flex items-center space-x-4 p-4 border rounded-lg">
+                      <div className={`w-2 h-2 rounded-full ${activity.color || 'bg-blue-500'}`}></div>
+                      <div className="flex-1">
+                        <p className="font-medium">{activity.title}</p>
+                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      </div>
+                      <span className="text-sm text-muted-foreground">{activity.timeAgo}</span>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -345,43 +294,47 @@ export const CompanyDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {filteredClients.map((client) => (
-                  <div key={client.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-primary" />
+                {filteredClients.length === 0 ? (
+                  <div className="text-center text-muted-foreground">No clients found</div>
+                ) : (
+                  filteredClients.map((client) => (
+                    <div key={client.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{client.name}</h3>
+                          <p className="text-sm text-muted-foreground">{client.email}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{client.name}</h3>
-                        <p className="text-sm text-muted-foreground">{client.email}</p>
+                      <div className="flex items-center space-x-6">
+                        <div className="text-center">
+                          <p className="text-sm font-medium">{client.subscriptions}</p>
+                          <p className="text-xs text-muted-foreground">Subscriptions</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-medium">${client.monthlyValue.toFixed(2)}</p>
+                          <p className="text-xs text-muted-foreground">Monthly</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
+                          {client.status}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <Button variant="ghost" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-6">
-                      <div className="text-center">
-                        <p className="text-sm font-medium">{client.subscriptions}</p>
-                        <p className="text-xs text-muted-foreground">Subscriptions</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-sm font-medium">${client.monthlyValue.toFixed(2)}</p>
-                        <p className="text-xs text-muted-foreground">Monthly</p>
-                      </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(client.status)}`}>
-                        {client.status}
-                      </span>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
@@ -398,36 +351,7 @@ export const CompanyDashboard: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockTeamMembers.map((member) => (
-                  <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{member.name}</h3>
-                        <p className="text-sm text-muted-foreground">{member.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-6">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(member.role)}`}>
-                        {member.role}
-                      </span>
-                      <div className="text-center">
-                        <p className="text-sm font-medium">{member.lastActive}</p>
-                        <p className="text-xs text-muted-foreground">Last Active</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                <div className="text-center text-muted-foreground">No team members found</div>
               </div>
             </CardContent>
           </Card>
