@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Users, 
@@ -42,6 +42,36 @@ export const CompanyDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+
+  // Real stats state (replace mock data)
+  const [stats, setStats] = useState({
+    totalClients: 0,
+    activeClients: 0,
+    totalRevenue: 0,
+    totalSubscriptions: 0
+  })
+
+  // Polling for real-time stats
+  useEffect(() => {
+    let isMounted = true
+    const fetchStats = async () => {
+      try {
+        // Replace with your backend API endpoint for dashboard stats
+        const res = await fetch('/api/company-dashboard-stats')
+        if (!res.ok) throw new Error('Failed to fetch stats')
+        const data = await res.json()
+        if (isMounted) setStats(data)
+      } catch (err) {
+        // Optionally handle error
+      }
+    }
+    fetchStats()
+    const interval = setInterval(fetchStats, 15000)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [])
 
   // Mock data - replace with real data from your API
   const mockClients: Client[] = [
@@ -96,13 +126,6 @@ export const CompanyDashboard: React.FC = () => {
     }
   ]
 
-  const stats = {
-    totalClients: mockClients.length,
-    activeClients: mockClients.filter(c => c.status === 'active').length,
-    totalRevenue: mockClients.reduce((sum, c) => sum + c.monthlyValue, 0),
-    totalSubscriptions: mockClients.reduce((sum, c) => sum + c.subscriptions, 0)
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'text-green-600 bg-green-100'
@@ -148,16 +171,6 @@ export const CompanyDashboard: React.FC = () => {
             </p>
           </div>
         </div>
-        {/* <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button size="sm">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Client
-          </Button>
-        </div> */}
       </div> 
 
       {/* Navigation Tabs */}
@@ -215,7 +228,7 @@ export const CompanyDashboard: React.FC = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Monthly Revenue</p>
+                    <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                     <p className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</p>
                   </div>
                   <DollarSign className="w-8 h-8 text-green-600" />
