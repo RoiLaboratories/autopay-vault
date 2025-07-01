@@ -155,14 +155,6 @@ function MainApp() {
                 <span>Dashboard</span>
               </Button>
               <Button
-                variant={currentPage === 'create' ? 'secondary' : 'ghost'}
-                onClick={() => setCurrentPage('create')}
-                className="flex items-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create</span>
-              </Button>
-              <Button
                 variant={currentPage === 'pricing' ? 'secondary' : 'ghost'}
                 onClick={() => setCurrentPage('pricing')}
                 className="flex items-center space-x-2"
@@ -201,15 +193,6 @@ function MainApp() {
               >
                 <LayoutDashboard className="w-4 h-4" />
                 <span className="text-xs">Dashboard</span>
-              </Button>
-              <Button
-                variant={currentPage === 'create' ? 'secondary' : 'ghost'}
-                onClick={() => setCurrentPage('create')}
-                className="flex flex-col items-center justify-center space-y-1 py-2 h-auto"
-                size="sm"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="text-xs">Create</span>
               </Button>
               <Button
                 variant={currentPage === 'pricing' ? 'secondary' : 'ghost'}

@@ -5,8 +5,6 @@ import {
   TrendingUp, 
   Activity, 
   DollarSign, 
-  Plus, 
-  Download,
   Eye,
   Edit,
   Trash2,
@@ -150,7 +148,7 @@ export const CompanyDashboard: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        {/* <div className="flex items-center space-x-3">
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -159,8 +157,8 @@ export const CompanyDashboard: React.FC = () => {
             <Plus className="w-4 h-4 mr-2" />
             Add Client
           </Button>
-        </div>
-      </div>
+        </div> */}
+      </div> 
 
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
@@ -168,8 +166,8 @@ export const CompanyDashboard: React.FC = () => {
           { key: 'overview', label: 'Overview', icon: BarChart3 },
           { key: 'plans', label: 'Billing Plans', icon: CreditCard },
           { key: 'clients', label: 'Clients', icon: Users },
-          { key: 'team', label: 'Team', icon: Users },
-          { key: 'analytics', label: 'Analytics', icon: TrendingUp }
+          // { key: 'team', label: 'Team', icon: Users },
+          // { key: 'analytics', label: 'Analytics', icon: TrendingUp }
         ].map(({ key, label, icon: Icon }) => (
           <Button
             key={key}
