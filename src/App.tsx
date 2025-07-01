@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
+import { usePrivy, useWallets } from '@privy-io/react-auth'
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext'
 import { LandingPage } from '@/components/LandingPage'
-import { WalletConnect } from '@/components/WalletConnect'
+// import { WalletConnect } from '@/components/WalletConnect'
 import { BillingPlanForm } from '@/components/BillingPlanForm'
 import { PricingPage } from '@/components/PricingPage'
 import { SubscriptionPage } from '@/components/SubscriptionPage'
 import { PlanBadge } from '@/components/FeatureGate'
-import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
 import { LayoutDashboard, LogOut, Wallet, CreditCard } from 'lucide-react'
 import { CompanyDashboard } from '@/components/CompanyDashboard'
@@ -48,7 +48,15 @@ function App() {
 
 function MainApp() {
   const [currentPage, setCurrentPage] = useState<AppState>('landing')
-  const { isConnected, address, disconnectWallet } = useWallet()
+  const { ready, login, logout } = usePrivy() // removed 'user' since it's unused
+  const { wallets } = useWallets()
+  const connectedWallet = wallets[0] || null
+  const isConnected = !!connectedWallet
+  const address = connectedWallet?.address || null
+
+  if (!ready) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
+  }
 
   // Debug logging for state changes
   useEffect(() => {
@@ -87,7 +95,7 @@ function MainApp() {
 
   const handleDisconnect = async () => {
     console.log('handleDisconnect called')
-    await disconnectWallet()
+    await logout()
     console.log('Wallet disconnected, setting page to landing')
     setCurrentPage('landing')
     // The success toast is already handled in useWallet hook
@@ -236,7 +244,8 @@ function MainApp() {
               className="min-h-screen flex items-center justify-center p-4"
             >
               <div className="w-full max-w-md">
-                <WalletConnect />
+                {/* Use Privy login button */}
+                <Button onClick={login} className="w-full" size="lg">Connect Wallet</Button>
               </div>
             </motion.div>
           )}
@@ -286,33 +295,10 @@ function MainApp() {
   }
 
   return (
-    <SubscriptionProvider>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--card-foreground))',
-            border: '1px solid hsl(var(--border))',
-          },
-          success: {
-            iconTheme: {
-              primary: 'hsl(var(--primary))',
-              secondary: 'hsl(var(--primary-foreground))',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: 'hsl(var(--destructive))',
-              secondary: 'hsl(var(--destructive-foreground))',
-            },
-          },
-        }}
-      />
+    <>
       {renderNavigation()}
       {renderContent()}
-    </SubscriptionProvider>
+    </>
   )
 }
 
