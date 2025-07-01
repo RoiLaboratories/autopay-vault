@@ -11,7 +11,7 @@ import { SubscriptionPage } from '@/components/SubscriptionPage'
 import { PlanBadge } from '@/components/FeatureGate'
 import { useWallet } from '@/hooks/useWallet'
 import { Button } from '@/components/ui/button'
-import { Plus, LayoutDashboard, LogOut, Wallet, CreditCard } from 'lucide-react'
+import { LayoutDashboard, LogOut, Wallet, CreditCard } from 'lucide-react'
 import { CompanyDashboard } from '@/components/CompanyDashboard'
 
 type AppState = 'landing' | 'wallet' | 'dashboard' | 'create' | 'pricing'
