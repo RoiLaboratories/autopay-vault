@@ -51,6 +51,19 @@ CREATE TABLE IF NOT EXISTS payment_logs (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create activity_log table
+CREATE TABLE IF NOT EXISTS activity_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    event_type TEXT NOT NULL, -- e.g. 'subscription_created', 'payment_success', 'plan_created', etc.
+    plan_id TEXT,
+    plan_subscription_id UUID,
+    actor_address TEXT, -- who performed the action
+    target_address TEXT, -- e.g. subscriber or recipient
+    description TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_billing_plans_creator_address ON billing_plans(creator_address);
 CREATE INDEX IF NOT EXISTS idx_billing_plans_plan_id ON billing_plans(plan_id);
@@ -60,11 +73,15 @@ CREATE INDEX IF NOT EXISTS idx_plan_subscriptions_subscriber ON plan_subscriptio
 CREATE INDEX IF NOT EXISTS idx_plan_subscriptions_next_payment ON plan_subscriptions(next_payment_due);
 CREATE INDEX IF NOT EXISTS idx_payment_logs_plan_subscription_id ON payment_logs(plan_subscription_id);
 CREATE INDEX IF NOT EXISTS idx_payment_logs_status ON payment_logs(status);
+CREATE INDEX IF NOT EXISTS idx_activity_log_plan_id ON activity_log(plan_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_actor_address ON activity_log(actor_address);
+CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE billing_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE plan_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_log ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for billing_plans
 -- Users can view all active billing plans (for subscription purposes)
@@ -104,6 +121,10 @@ CREATE POLICY "Users can view payment logs for own subscriptions" ON payment_log
         )
     );
 
+-- Activity log policy - users can view their own activity logs
+CREATE POLICY "Users can view own activity logs" ON activity_log
+    FOR SELECT USING (actor_address = current_setting('request.jwt.claims', true)::json->>'wallet_address');
+
 -- Service role can do everything (for the backend agent)
 CREATE POLICY "Service role full access billing_plans" ON billing_plans
     FOR ALL USING (auth.role() = 'service_role');
@@ -112,6 +133,9 @@ CREATE POLICY "Service role full access plan_subscriptions" ON plan_subscription
     FOR ALL USING (auth.role() = 'service_role');
 
 CREATE POLICY "Service role full access payment_logs" ON payment_logs
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access activity_log" ON activity_log
     FOR ALL USING (auth.role() = 'service_role');
 
 -- Create triggers for updated_at timestamp
