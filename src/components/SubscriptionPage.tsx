@@ -348,7 +348,16 @@ export const SubscriptionPage: React.FC = () => {
                     <div className="text-xs text-gray-500 text-center">
                       Allowance: {allowance?.toString()} | Required: {ethers.parseUnits(plan.amount.toString(), 6).toString()}
                     </div>
-                    {(!allowance || typeof allowance !== 'bigint' || allowance < ethers.parseUnits(plan.amount.toString(), 6)) ? (
+                    {(() => {
+                      let currentAllowance: bigint = 0n;
+                      try {
+                        currentAllowance = typeof allowance === 'bigint' ? allowance : BigInt(allowance || 0);
+                      } catch {
+                        currentAllowance = 0n;
+                      }
+                      const requiredAmount = ethers.parseUnits(plan.amount.toString(), 6);
+                      return currentAllowance < requiredAmount;
+                    })() ? (
                       <Button
                         onClick={handleApprove}
                         disabled={subscribing || checkingAllowance}
