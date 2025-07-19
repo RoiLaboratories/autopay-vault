@@ -37,7 +37,7 @@ interface BillingPlan {
 }
 
 interface SubscriptionPageProps {
-  privyWallet: any | null;
+  privyWallet?: any | null;
 }
 
 export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet }) => {

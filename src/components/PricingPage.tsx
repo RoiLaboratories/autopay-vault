@@ -28,7 +28,7 @@ const PRICING_TIERS: PricingTier[] = [
     period: 'forever',
     description: 'Perfect for trying out AutoPay Vault',
     features: [
-      '3 active subscriptions',
+      '3 active billing plans',
       'Basic wallet connection',
       'Community support',
       'Standard transaction speed'
@@ -43,7 +43,7 @@ const PRICING_TIERS: PricingTier[] = [
     period: 'month',
     description: 'For power users and small teams',
     features: [
-      '50 active subscriptions',
+      '50 active billing plans',
       'Advanced analytics',
       'Email notifications',
       'Priority transaction processing',
@@ -61,7 +61,7 @@ const PRICING_TIERS: PricingTier[] = [
     period: 'month',
     description: 'For large organizations and businesses',
     features: [
-      'Unlimited subscriptions',
+      'Unlimited billing plans',
       'Advanced analytics & reporting',
       'Custom integrations',
       'Dedicated account manager',

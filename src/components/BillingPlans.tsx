@@ -18,6 +18,8 @@ import { BillingPlanModal } from './BillingPlanModal'
 import { toast } from 'react-hot-toast'
 import { billingPlanService } from '@/services/BillingPlanService'
 import { useSubscription } from '@/contexts/SubscriptionContext'
+import { useWallet } from '@/hooks/useWallet'
+import { BrowserProvider } from 'ethers'
 
 export interface BillingPlan {
   id: string
@@ -34,33 +36,25 @@ export interface BillingPlan {
   contract_plan_id?: string
 }
 
-export const BillingPlans: React.FC<{ privyWallet?: any }> = ({ privyWallet }) => {
+export const BillingPlans: React.FC = () => {
   const { userTier } = useSubscription();
+  const { ethereum, address, isConnected } = useWallet();
   const [plans, setPlans] = useState<BillingPlan[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [editingPlan, setEditingPlan] = useState<BillingPlan | null>(null)
   const [loading, setLoading] = useState(false)
-  // Remove useSubscription, use privyWallet for address/provider
-  const address = privyWallet?.address || null;
   const [provider, setProvider] = useState<any>(null);
 
   useEffect(() => {
-    console.log('BillingPlans: privyWallet', privyWallet);
-    if (privyWallet && privyWallet.getEip1193Provider) {
-      const eipProvider = privyWallet.getEip1193Provider();
-      console.log('BillingPlans: eipProvider', eipProvider);
-      if (eipProvider) {
-        setProvider(new (require('ethers').BrowserProvider)(eipProvider));
-      } else {
-        setProvider(null);
-        console.warn('No EIP-1193 provider found. This wallet may not support on-chain transactions.');
-      }
+    console.log('BillingPlans: ethereum provider', ethereum);
+    if (ethereum && isConnected) {
+      setProvider(new BrowserProvider(ethereum));
     } else {
       setProvider(null);
-      console.warn('privyWallet is missing or does not have getEip1193Provider.');
+      console.warn('No ethereum provider found or wallet not connected.');
     }
-  }, [privyWallet])
+  }, [ethereum, isConnected])
 
   // Plan limits based on user tier
   const getPlanLimits = () => {
@@ -288,13 +282,23 @@ export const BillingPlans: React.FC<{ privyWallet?: any }> = ({ privyWallet }) =
       transition={{ duration: 0.5 }}
       className="space-y-6"
     >
+      {/* Show warning if not connected */}
+      {!isConnected && (
+        <Card className="mb-4 border-red-500 border">
+          <CardContent className="flex flex-col items-center justify-center py-4">
+            <p className="text-red-600 font-semibold text-center">
+              Please connect your wallet to manage billing plans.
+            </p>
+          </CardContent>
+        </Card>
+      )}
       {/* Show warning if provider is missing */}
-      {!provider && (
+      {isConnected && !provider && (
         <Card className="mb-4 border-red-500 border">
           <CardContent className="flex flex-col items-center justify-center py-4">
             <p className="text-red-600 font-semibold text-center">
               Your connected wallet does not support on-chain transactions.<br />
-              Please connect a MetaMask, WalletConnect, or other on-chain wallet to create billing plans.
+              Please make sure you're using the Coinbase Wallet extension.
             </p>
           </CardContent>
         </Card>
