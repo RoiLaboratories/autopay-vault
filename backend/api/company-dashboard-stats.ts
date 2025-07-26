@@ -2,10 +2,21 @@ import { createClient } from '@supabase/supabase-js'
 import { VercelRequest, VercelResponse } from '@vercel/node'
 import { setCorsHeaders } from './cors'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Debug environment variables
+console.log('Environment check:', {
+  SUPABASE_URL: process.env.SUPABASE_URL ? 'SET' : 'MISSING',
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING',
+  SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'MISSING'
+})
+
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(`Missing Supabase configuration: URL=${!!supabaseUrl}, KEY=${!!supabaseKey}`)
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS first, before any other logic
