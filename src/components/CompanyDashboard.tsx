@@ -5,36 +5,18 @@ import {
   TrendingUp, 
   Activity, 
   DollarSign, 
-  Eye,
-  Edit,
-  Trash2,
   Building2,
   CreditCard,
   BarChart3
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { BillingPlans } from './BillingPlans'
 import { useWallet } from '@/hooks/useWallet'
-// import { BillingPlanForm } from './BillingPlanForm'
-
-interface Client {
-  id: string
-  name: string
-  email: string
-  status: 'active' | 'inactive' | 'pending'
-  subscriptions: number
-  monthlyValue: number
-  joinDate: string
-  lastPayment: string
-}
 
 export const CompanyDashboard: React.FC = () => {
   const { address } = useWallet()
-  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'team' | 'analytics'>('overview')
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   // Real stats state (replace mock data)
@@ -45,37 +27,45 @@ export const CompanyDashboard: React.FC = () => {
     totalSubscriptions: 0
   })
 
-  const [clients, setClients] = useState<Client[]>([])
-  const [recentActivity, setRecentActivity] = useState<any[]>([])
+  // Activity state - COMMENTED OUT FOR NOW
+  // const [recentActivity, setRecentActivity] = useState<any[]>([])
 
   // API URL
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+  // Use the deployed backend API for now since Vite doesn't handle api/ folder in dev
+  const API_URL = import.meta.env.VITE_API_URL || 'https://autopay-vault-api.vercel.app'
 
   // Polling for real-time stats
   useEffect(() => {
-    if (!address) return
+    if (!address) {
+      console.log('CompanyDashboard: No wallet address available')
+      return
+    }
+
+    console.log('CompanyDashboard: Fetching data for address:', address)
 
     let isMounted = true
     const fetchStats = async () => {
       try {
+        console.log('Fetching stats from:', `${API_URL}/api/company-dashboard-stats?creatorAddress=${address}`)
         const res = await fetch(`${API_URL}/api/company-dashboard-stats?creatorAddress=${address}`)
-        if (!res.ok) throw new Error('Failed to fetch stats')
+        if (!res.ok) {
+          console.error('Stats fetch failed:', res.status, res.statusText)
+          throw new Error('Failed to fetch stats')
+        }
         const data = await res.json()
+        console.log('Stats data received:', data)
         if (isMounted) setStats(data)
 
-        // Fetch clients
-        const clientsRes = await fetch(`${API_URL}/api/company-dashboard-clients?creatorAddress=${address}`)
-        if (clientsRes.ok) {
-          const clientsData = await clientsRes.json()
-          if (isMounted) setClients(clientsData.clients || [])
-        }
-
-        // Fetch recent activity
-        const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
-        if (activityRes.ok) {
-          const activityData = await activityRes.json()
-          if (isMounted) setRecentActivity(activityData.activities || [])
-        }
+        // Fetch activity data - COMMENTED OUT FOR NOW
+        // console.log('Fetching activity from:', `${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
+        // const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
+        // if (activityRes.ok) {
+        //   const activityData = await activityRes.json()
+        //   console.log('Activity data received:', activityData)
+        //   if (isMounted) setRecentActivity(activityData.activities || [])
+        // } else {
+        //   console.error('Activity fetch failed:', activityRes.status, activityRes.statusText)
+        // }
       } catch (err) {
         console.error('Error fetching dashboard stats:', err)
         // Keep existing stats on error
@@ -100,41 +90,18 @@ export const CompanyDashboard: React.FC = () => {
       const data = await res.json()
       setStats(data)
 
-      // Fetch clients
-      const clientsRes = await fetch(`${API_URL}/api/company-dashboard-clients?creatorAddress=${address}`)
-      if (clientsRes.ok) {
-        const clientsData = await clientsRes.json()
-        setClients(clientsData.clients || [])
-      }
-
-      // Fetch recent activity
-      const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
-      if (activityRes.ok) {
-        const activityData = await activityRes.json()
-        setRecentActivity(activityData.activities || [])
-      }
+      // Fetch activity data - COMMENTED OUT FOR NOW
+      // const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
+      // if (activityRes.ok) {
+      //   const activityData = await activityRes.json()
+      //   setRecentActivity(activityData.activities || [])
+      // }
     } catch (err) {
       console.error('Error refreshing dashboard stats:', err)
     } finally {
       setIsRefreshing(false)
     }
   }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'text-green-600 bg-green-100'
-      case 'inactive': return 'text-red-600 bg-red-100'
-      case 'pending': return 'text-yellow-600 bg-yellow-100'
-      default: return 'text-gray-600 bg-gray-100'
-    }
-  }
-
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         client.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || client.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
 
   return (
     <motion.div
@@ -167,7 +134,7 @@ export const CompanyDashboard: React.FC = () => {
         {[
           { key: 'overview', label: 'Overview', icon: BarChart3 },
           { key: 'plans', label: 'Billing Plans', icon: CreditCard },
-          { key: 'clients', label: 'Clients', icon: Users },
+          // { key: 'clients', label: 'Clients', icon: Users },
           // { key: 'team', label: 'Team', icon: Users },
           // { key: 'analytics', label: 'Analytics', icon: TrendingUp }
         ].map(({ key, label, icon: Icon }) => (
@@ -238,29 +205,161 @@ export const CompanyDashboard: React.FC = () => {
             </Card>
           </div>
 
-          {/* Recent Activity */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>Latest client and subscription activities</CardDescription>
+          {/* AutoPay Vault Features */}
+          <Card className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/20 dark:to-indigo-950/20" />
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center space-x-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+                >
+                  <DollarSign className="w-4 h-4 text-white" />
+                </motion.div>
+                <span>AutoPay Vault Features</span>
+              </CardTitle>
+              <CardDescription>Powerful tools for subscription management</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recentActivity.length === 0 ? (
-                  <div className="text-center text-muted-foreground">No recent activity</div>
-                ) : (
-                  recentActivity.map((activity, idx) => (
-                    <div key={idx} className="flex items-center space-x-4 p-4 border rounded-lg">
-                      <div className={`w-2 h-2 rounded-full ${activity.color || 'bg-blue-500'}`}></div>
-                      <div className="flex-1">
-                        <p className="font-medium">{activity.title}</p>
-                        <p className="text-sm text-muted-foreground">{activity.description}</p>
-                      </div>
-                      <span className="text-sm text-muted-foreground">{activity.timeAgo}</span>
-                    </div>
-                  ))
-                )}
+            <CardContent className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.1 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50/50 dark:hover:bg-green-950/20 hover:border-green-300 dark:hover:border-green-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.5 }}
+                      className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <CreditCard className="w-4 h-4 text-green-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Automated Payments</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Set up recurring USDC payments with smart contract automation for reliable subscription billing.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.2 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-purple-200 dark:border-purple-800 cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-950/20 hover:border-purple-300 dark:hover:border-purple-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <Users className="w-4 h-4 text-purple-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Client Management</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Track subscriber activity, manage plans, and analyze revenue streams with comprehensive analytics.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.3 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ 
+                        rotateY: 180,
+                        transition: { duration: 0.5 }
+                      }}
+                      className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Real-time Analytics</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor subscription metrics, revenue trends, and client engagement with live dashboard updates.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.4 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ 
+                        scale: [1, 1.2, 1],
+                        transition: { duration: 0.3 }
+                      }}
+                      className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Enterprise Ready</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Built on Base blockchain with secure smart contracts and enterprise-grade reliability.
+                  </p>
+                </motion.div>
               </div>
+              
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-dashed border-blue-300 dark:border-blue-700"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100">Getting Started</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Create your first billing plan to start accepting USDC subscriptions
+                    </p>
+                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setActiveTab('plans')}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                    >
+                      Create Plan
+                    </Button>
+                  </motion.div>
+                </div>
+              </motion.div>
             </CardContent>
           </Card>
         </div>
@@ -273,7 +372,8 @@ export const CompanyDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Clients Tab */}
+      {/* Clients Tab - Commented out for now */}
+      {/*
       {activeTab === 'clients' && (
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
@@ -349,6 +449,7 @@ export const CompanyDashboard: React.FC = () => {
           </Card>
         </div>
       )}
+      */}
 
       {/* Team Tab */}
       {activeTab === 'team' && (

@@ -35,12 +35,12 @@ const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
   pro: {
     maxSubscriptions: 50,
     maxClients: 50,
-    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'company_dashboard']
+    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'company_dashboard', 'automatic_payments']
   },
   enterprise: {
     maxSubscriptions: -1, // unlimited
     maxClients: -1, // unlimited
-    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'api_access', 'priority_support', 'company_dashboard']
+    features: ['basic_subscriptions', 'wallet_connect', 'analytics', 'email_notifications', 'api_access', 'priority_support', 'company_dashboard', 'automatic_payments']
   }
 }
 

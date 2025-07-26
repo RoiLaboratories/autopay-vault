@@ -213,15 +213,96 @@ export class BillingPlanService {
   async getPlanSubscriptions(planId: string): Promise<SubscriptionContract[]> {
     if (!this.contract) throw new Error('Contract not initialized')
 
-    const subscriptions = await this.contract.getPlanSubscriptions(planId)
-    return subscriptions.map((sub: any) => ({
-      planId: sub.planId,
-      subscriber: sub.subscriber,
-      nextPaymentDue: sub.nextPaymentDue,
-      isActive: sub.isActive,
-      createdAt: sub.createdAt,
-      lastPayment: sub.lastPayment
-    }))
+    try {
+      // First check if the plan exists on-chain
+      console.log(`Checking plan ${planId} on-chain...`)
+      console.log(`Contract address: ${BILLING_PLAN_MANAGER_ADDRESS}`)
+      console.log(`Signer address: ${await this.signer?.getAddress()}`)
+      
+      // Test basic contract connectivity
+      try {
+        const owner = await this.contract.owner()
+        console.log('Contract owner:', owner)
+        const usdcToken = await this.contract.usdcToken()
+        console.log('USDC token address:', usdcToken)
+      } catch (basicError: any) {
+        console.error('Basic contract calls failed:', basicError)
+        throw new Error(`Contract connectivity issue: ${basicError.message}`)
+      }
+      
+      let plan
+      try {
+        console.log(`Calling getPlan with planId: "${planId}"`)
+        plan = await this.contract.getPlan(planId)
+        console.log('Raw plan response:', plan)
+        console.log('Plan details from contract:', plan)
+        console.log('Plan fields:', {
+          planId: plan.planId,
+          creator: plan.creator,
+          name: plan.name,
+          amount: plan.amount?.toString(),
+          interval: plan.interval?.toString(),
+          recipientWallet: plan.recipientWallet,
+          isActive: plan.isActive,
+          createdAt: plan.createdAt?.toString()
+        })
+      } catch (planError: any) {
+        console.error('Error calling getPlan:', planError)
+        console.error('Plan error details:', {
+          code: planError.code,
+          reason: planError.reason,
+          message: planError.message,
+          info: planError.info
+        })
+        
+        // Try to get user plans to see if contract works for other functions
+        try {
+          const userPlans = await this.contract.getUserPlans(await this.signer?.getAddress())
+          console.log('User plans from contract:', userPlans)
+        } catch (userPlansError) {
+          console.error('getUserPlans also failed:', userPlansError)
+        }
+        
+        throw new Error(`Failed to fetch plan ${planId} from smart contract: ${planError.message}`)
+      }
+      
+      if (!plan || plan.planId === '' || plan.planId !== planId) {
+        console.warn(`Plan ${planId} does not exist on-chain or planId mismatch`)
+        console.log('Expected planId:', planId)
+        console.log('Returned planId:', plan?.planId)
+        throw new Error(`Plan ${planId} not found on smart contract. Expected planId: ${planId}, Got: ${plan?.planId || 'undefined'}`)
+      }
+
+      console.log(`Plan ${planId} found and verified, fetching subscriptions...`)
+      let subscriptions
+      try {
+        subscriptions = await this.contract.getPlanSubscriptions(planId)
+        console.log('Raw subscriptions from contract:', subscriptions)
+        console.log('Subscriptions length:', subscriptions?.length)
+      } catch (subError: any) {
+        console.error('Error calling getPlanSubscriptions:', subError)
+        throw new Error(`Failed to fetch subscriptions for plan ${planId}: ${subError.message}`)
+      }
+      
+      const mappedSubscriptions = subscriptions.map((sub: any) => ({
+        planId: sub.planId,
+        subscriber: sub.subscriber,
+        nextPaymentDue: sub.nextPaymentDue,
+        isActive: sub.isActive,
+        createdAt: sub.createdAt,
+        lastPayment: sub.lastPayment
+      }))
+      
+      console.log('Mapped subscriptions:', mappedSubscriptions)
+      return mappedSubscriptions
+    } catch (error: any) {
+      console.error(`Error fetching subscriptions for plan ${planId}:`, error)
+      if (error.code === 'BAD_DATA' || error.message.includes('could not decode result data')) {
+        console.warn(`Plan ${planId} not found on smart contract`)
+        throw new Error(`Plan ${planId} not found on smart contract. It may need to be created on-chain first.`)
+      }
+      throw error
+    }
   }
 
   async getSubscription(userAddress: string, planId: string): Promise<SubscriptionContract> {

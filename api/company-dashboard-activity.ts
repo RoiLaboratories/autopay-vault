@@ -1,11 +1,21 @@
 import { createClient } from '@supabase/supabase-js'
+import { VercelRequest, VercelResponse } from '@vercel/node'
+import { setCorsHeaders } from './cors'
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS first
+  const origin = req.headers.origin as string
+  setCorsHeaders(res, origin)
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -37,8 +47,10 @@ export default async function handler(req: any, res: any) {
     }
     const { data, error } = await query
     if (error) throw error
-    res.status(200).json({ activities: data })
+    res.status(200).json({ activities: data || [] })
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Failed to fetch activity' })
+    console.error('Dashboard activity error:', error)
+    setCorsHeaders(res, req.headers.origin as string)
+    res.status(500).json({ error: error.message || 'Failed to fetch dashboard activity' })
   }
 }

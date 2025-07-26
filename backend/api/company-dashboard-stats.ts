@@ -36,6 +36,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { creatorAddress } = req.query
     
     console.log('Fetching stats for creator:', creatorAddress)
+    console.log('Using Supabase URL:', supabaseUrl)
+    
+    // Test basic connectivity
+    const { data: testData, error: testError } = await supabase
+      .from('billing_plans')
+      .select('count(*)', { count: 'exact' })
+    
+    console.log('Database connectivity test:', { testData, testError })
     
     let plansQuery = supabase.from('billing_plans').select('id, plan_id, is_active, amount')
     if (creatorAddress) {
@@ -49,6 +57,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('Found plans:', plans?.length || 0)
+    console.log('Plans data:', plans)
 
     // Handle case where no plans exist
     if (!plans || plans.length === 0) {

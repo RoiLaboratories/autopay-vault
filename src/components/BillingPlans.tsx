@@ -10,7 +10,10 @@ import {
   Calendar,
   Wallet,
   CreditCard,
-  PlayCircle
+  PlayCircle,
+  Zap,
+  ZapOff,
+  Crown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +21,7 @@ import { Input } from '@/components/ui/input'
 import { BillingPlanModal } from './BillingPlanModal'
 import { toast } from 'react-hot-toast'
 import { billingPlanService } from '@/services/BillingPlanService'
+import { automaticPaymentService } from '@/services/AutomaticPaymentService'
 import { useSubscription } from '@/contexts/SubscriptionContext'
 import { useWallet } from '@/hooks/useWallet'
 import { BrowserProvider } from 'ethers'
@@ -46,6 +50,7 @@ export const BillingPlans: React.FC = () => {
   const [editingPlan, setEditingPlan] = useState<BillingPlan | null>(null)
   const [loading, setLoading] = useState(false)
   const [provider, setProvider] = useState<any>(null);
+  const [automaticPaymentsEnabled, setAutomaticPaymentsEnabled] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     console.log('BillingPlans: ethereum provider', ethereum);
@@ -80,6 +85,13 @@ export const BillingPlans: React.FC = () => {
       billingPlanService.initialize(provider)
     }
   }, [provider])
+
+  // Cleanup automatic payments when component unmounts
+  useEffect(() => {
+    return () => {
+      automaticPaymentService.stopAllAutomaticPayments()
+    }
+  }, [])
 
   const loadPlans = async () => {
     if (!address) return
@@ -274,7 +286,33 @@ export const BillingPlans: React.FC = () => {
       await billingPlanService.initialize(provider)
       
       // Get plan subscriptions to check for due payments
-      const subscriptions = await billingPlanService.getPlanSubscriptions(planId)
+      let subscriptions: any[] = []
+      try {
+        subscriptions = await billingPlanService.getPlanSubscriptions(planId)
+        console.log('Found subscriptions:', subscriptions)
+        
+        if (subscriptions.length === 0) {
+          toast('No subscriptions found for this plan', {
+            icon: 'ℹ️',
+            duration: 3000,
+          })
+          return
+        }
+      } catch (subError: any) {
+        console.error('Error getting subscriptions:', subError)
+        if (subError.message.includes('could not decode result data') || subError.code === 'BAD_DATA') {
+          toast('Plan not found on smart contract. It may need to be created on-chain first.', {
+            icon: '⚠️',
+            duration: 5000,
+          })
+        } else {
+          toast(`Error fetching subscriptions: ${subError.message}`, {
+            icon: '❌',
+            duration: 5000,
+          })
+        }
+        return
+      }
       
       let processedCount = 0
       let errorCount = 0
@@ -310,6 +348,66 @@ export const BillingPlans: React.FC = () => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleToggleAutomaticPayments = async (planId: string) => {
+    if (!provider) {
+      toast.error('Please connect your wallet to enable automatic payments.')
+      return
+    }
+
+    // Check if user has access to automatic payments
+    if (!canAccessAutomaticPayments()) {
+      toast.error('Automatic payments are only available for Pro and Enterprise users. Please upgrade your plan.')
+      return
+    }
+
+    const isCurrentlyEnabled = automaticPaymentsEnabled.has(planId)
+    
+    try {
+      if (isCurrentlyEnabled) {
+        // Disable automatic payments
+        automaticPaymentService.stopAutomaticPayments(planId)
+        setAutomaticPaymentsEnabled(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(planId)
+          return newSet
+        })
+        toast.success('Automatic payments disabled for this plan')
+      } else {
+        // Enable automatic payments
+        const success = await automaticPaymentService.startAutomaticPayments(
+          planId,
+          userTier,
+          provider as BrowserProvider, // Type assertion since we know provider is BrowserProvider
+          (_, subscriber, success) => {
+            if (success) {
+              toast.success(`Automatic payment processed for ${subscriber.slice(0, 6)}...`, {
+                duration: 4000,
+              })
+            } else {
+              toast.error(`Automatic payment failed for ${subscriber.slice(0, 6)}...`, {
+                duration: 4000,
+              })
+            }
+          }
+        )
+        
+        if (success) {
+          setAutomaticPaymentsEnabled(prev => new Set(prev).add(planId))
+          toast.success('Automatic payments enabled for this plan! Real-time event monitoring active.')
+        } else {
+          toast.error('Failed to enable automatic payments')
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling automatic payments:', error)
+      toast.error('Failed to toggle automatic payments')
+    }
+  }
+
+  const canAccessAutomaticPayments = () => {
+    return userTier === 'pro' || userTier === 'enterprise'
   }
 
   const handleCopyLink = (planId: string) => {
@@ -378,6 +476,11 @@ export const BillingPlans: React.FC = () => {
           <p className="text-muted-foreground">
             Create and manage your subscription billing plans
           </p>
+          {canAccessAutomaticPayments() && (
+            <p className="text-sm text-green-600 mt-1">
+              ✨ Automatic payments available with your {userTier} plan
+            </p>
+          )}
         </div>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-muted-foreground">
@@ -521,16 +624,55 @@ export const BillingPlans: React.FC = () => {
                   
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Payment Management:</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!provider || loading}
-                      onClick={() => handleProcessPayments(plan.plan_id)}
-                      className="w-full"
-                    >
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      Process Due Payments
-                    </Button>
+                    <div className="space-y-2">
+                      {/* Manual Payment Processing */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!provider || loading}
+                        onClick={() => handleProcessPayments(plan.plan_id)}
+                        className="w-full"
+                      >
+                        <PlayCircle className="w-4 h-4 mr-2" />
+                        Process Due Payments
+                      </Button>
+                      
+                      {/* Automatic Payment Toggle (Pro/Enterprise only) */}
+                      {canAccessAutomaticPayments() ? (
+                        <Button
+                          variant={automaticPaymentsEnabled.has(plan.plan_id) ? "default" : "outline"}
+                          size="sm"
+                          disabled={!provider || loading}
+                          onClick={() => handleToggleAutomaticPayments(plan.plan_id)}
+                          className="w-full"
+                        >
+                          {automaticPaymentsEnabled.has(plan.plan_id) ? (
+                            <>
+                              <ZapOff className="w-4 h-4 mr-2" />
+                              Disable Auto Payments
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-4 h-4 mr-2" />
+                              Enable Auto Payments
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <div className="flex items-center justify-center p-2 bg-muted rounded text-sm text-muted-foreground">
+                          <Crown className="w-4 h-4 mr-2" />
+                          <span>Auto payments: Pro/Enterprise only</span>
+                        </div>
+                      )}
+                      
+                      {/* Status indicator for automatic payments */}
+                      {automaticPaymentsEnabled.has(plan.plan_id) && (
+                        <div className="flex items-center justify-center p-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                          <Zap className="w-4 h-4 mr-2" />
+                          <span>Automatic payments active</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardContent>
