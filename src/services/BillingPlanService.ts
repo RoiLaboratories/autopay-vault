@@ -210,6 +210,20 @@ export class BillingPlanService {
     return await this.contract.getUserPlans(userAddress)
   }
 
+  async getPlanSubscriptions(planId: string): Promise<SubscriptionContract[]> {
+    if (!this.contract) throw new Error('Contract not initialized')
+
+    const subscriptions = await this.contract.getPlanSubscriptions(planId)
+    return subscriptions.map((sub: any) => ({
+      planId: sub.planId,
+      subscriber: sub.subscriber,
+      nextPaymentDue: sub.nextPaymentDue,
+      isActive: sub.isActive,
+      createdAt: sub.createdAt,
+      lastPayment: sub.lastPayment
+    }))
+  }
+
   async getSubscription(userAddress: string, planId: string): Promise<SubscriptionContract> {
     if (!this.contract) throw new Error('Contract not initialized')
 

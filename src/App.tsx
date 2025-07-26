@@ -8,6 +8,7 @@ import { LandingPage } from '@/components/LandingPage'
 import { BillingPlanForm } from '@/components/BillingPlanForm'
 import { PricingPage } from '@/components/PricingPage'
 import { SubscriptionPage } from '@/components/SubscriptionPage'
+import { UserSubscriptions } from '@/components/UserSubscriptions'
 import { PlanBadge } from '@/components/FeatureGate'
 import { Button } from '@/components/ui/button'
 import { LayoutDashboard, LogOut, Wallet, CreditCard } from 'lucide-react'
@@ -22,6 +23,7 @@ function App() {
       <SubscriptionProvider>
         <Routes>
           <Route path="/subscribe/:planId" element={<SubscriptionPage />} />
+          <Route path="/my-subscriptions" element={<UserSubscriptions />} />
           <Route path="/*" element={<MainApp />} />
         </Routes>
         <Toaster
@@ -79,7 +81,8 @@ function MainApp() {
 
   const handleDisconnect = async () => {
     await disconnectWallet()
-    setCurrentPage('landing')
+    // Don't redirect to landing page, keep user on current page
+    console.log('Wallet disconnected, staying on:', currentPage)
   }
 
   // Auto-redirect to dashboard if wallet is connected and we're on the wallet page
@@ -89,19 +92,12 @@ function MainApp() {
     }
   }, [currentPage, isConnected, address])
 
-  // Handle wallet disconnection - redirect to landing if on a protected page
+  // Handle wallet disconnection - keep user on current page instead of redirecting
   useEffect(() => {
-    let didLogout = false;
     if (!isConnected && (currentPage === 'dashboard' || currentPage === 'create')) {
-      (async () => {
-        if (!didLogout) {
-          console.log('Wallet disconnected, redirecting to landing')
-          didLogout = true;
-          setCurrentPage('landing');
-        }
-      })();
+      console.log('Wallet disconnected, staying on current page:', currentPage)
+      // Users can stay on the page but features requiring wallet connection will be disabled
     }
-    // No cleanup needed
   }, [isConnected, currentPage])
 
   // Listen for navigation events from feature gates
@@ -117,7 +113,7 @@ function MainApp() {
   }, [])
 
   const renderNavigation = () => {
-    if (!isConnected || currentPage === 'landing' || currentPage === 'wallet') {
+    if (currentPage === 'landing' || currentPage === 'wallet') {
       return null
     }
 
@@ -160,18 +156,31 @@ function MainApp() {
             {/* Wallet Info */}
             <div className="flex items-center space-x-3">
               <PlanBadge />
-              <div className="hidden sm:flex items-center space-x-3 glass rounded-lg px-3 py-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium">{formatAddress(address!)}</span>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleDisconnect}
-                className="text-muted-foreground hover:text-destructive transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
+              {isConnected && address ? (
+                <>
+                  <div className="hidden sm:flex items-center space-x-3 glass rounded-lg px-3 py-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium">{formatAddress(address)}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleDisconnect}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  onClick={connectWallet}
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <Wallet className="w-4 h-4" />
+                  <span className="hidden sm:inline">Connect Wallet</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -246,7 +255,7 @@ function MainApp() {
             </motion.div>
           )}
 
-          {currentPage === 'dashboard' && isConnected && (
+          {currentPage === 'dashboard' && (
             <motion.div
               key="dashboard"
               initial={{ opacity: 0, x: -20 }}
@@ -260,7 +269,7 @@ function MainApp() {
             </motion.div>
           )}
 
-          {currentPage === 'create' && isConnected && (
+          {currentPage === 'create' && (
             <motion.div
               key="create"
               initial={{ opacity: 0, x: -20 }}

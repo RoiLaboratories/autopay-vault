@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { BillingPlans } from './BillingPlans'
+import { useWallet } from '@/hooks/useWallet'
 // import { BillingPlanForm } from './BillingPlanForm'
 
 interface Client {
@@ -30,6 +31,7 @@ interface Client {
 }
 
 export const CompanyDashboard: React.FC = () => {
+  const { address } = useWallet()
   const [activeTab, setActiveTab] = useState<'overview' | 'plans' | 'clients' | 'team' | 'analytics'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -46,65 +48,73 @@ export const CompanyDashboard: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([])
   const [recentActivity, setRecentActivity] = useState<any[]>([])
 
+  // API URL
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
   // Polling for real-time stats
   useEffect(() => {
+    if (!address) return
+
     let isMounted = true
     const fetchStats = async () => {
       try {
-        const res = await fetch('/api/company-dashboard-stats')
+        const res = await fetch(`${API_URL}/api/company-dashboard-stats?creatorAddress=${address}`)
         if (!res.ok) throw new Error('Failed to fetch stats')
         const data = await res.json()
         if (isMounted) setStats(data)
 
         // Fetch clients
-        const clientsRes = await fetch('/api/company-dashboard-clients')
+        const clientsRes = await fetch(`${API_URL}/api/company-dashboard-clients?creatorAddress=${address}`)
         if (clientsRes.ok) {
           const clientsData = await clientsRes.json()
           if (isMounted) setClients(clientsData.clients || [])
         }
 
         // Fetch recent activity
-        const activityRes = await fetch('/api/company-dashboard-activity')
+        const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
         if (activityRes.ok) {
           const activityData = await activityRes.json()
           if (isMounted) setRecentActivity(activityData.activities || [])
         }
       } catch (err) {
-        // Optionally handle error
+        console.error('Error fetching dashboard stats:', err)
+        // Keep existing stats on error
       }
     }
     fetchStats()
-    const interval = setInterval(fetchStats, 15000)
+    const interval = setInterval(fetchStats, 15000) // Refresh every 15 seconds
     return () => {
       isMounted = false
       clearInterval(interval)
     }
-  }, [])
+  }, [address, API_URL])
 
   // Manual refresh handler
   const handleRefresh = async () => {
+    if (!address) return
+
     setIsRefreshing(true)
     try {
-      const res = await fetch('/api/company-dashboard-stats')
+      const res = await fetch(`${API_URL}/api/company-dashboard-stats?creatorAddress=${address}`)
       if (!res.ok) throw new Error('Failed to fetch stats')
       const data = await res.json()
       setStats(data)
 
       // Fetch clients
-      const clientsRes = await fetch('/api/company-dashboard-clients')
+      const clientsRes = await fetch(`${API_URL}/api/company-dashboard-clients?creatorAddress=${address}`)
       if (clientsRes.ok) {
         const clientsData = await clientsRes.json()
         setClients(clientsData.clients || [])
       }
 
       // Fetch recent activity
-      const activityRes = await fetch('/api/company-dashboard-activity')
+      const activityRes = await fetch(`${API_URL}/api/company-dashboard-activity?creatorAddress=${address}`)
       if (activityRes.ok) {
         const activityData = await activityRes.json()
         setRecentActivity(activityData.activities || [])
       }
     } catch (err) {
-      // Optionally handle error
+      console.error('Error refreshing dashboard stats:', err)
     } finally {
       setIsRefreshing(false)
     }

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'react-hot-toast'
 import { ethers } from 'ethers'
+import { useWallet } from '@/hooks/useWallet'
 
 // BillingPlanManager contract ABI (minimal for subscribe, hasActiveSubscription, getPlan)
 const BILLING_PLAN_MANAGER_ABI = [
@@ -21,9 +22,18 @@ const USDC_ABI = [
   'function approve(address spender, uint256 amount) external returns (bool)'
 ]
 
-// Set these from your .env or config
-const BILLING_PLAN_MANAGER_ADDRESS = import.meta.env.VITE_BILLING_PLAN_MANAGER_ADDRESS || ''
+// Set these from your .env or config - use deployed addresses as fallback
+const BILLING_PLAN_MANAGER_ADDRESS = import.meta.env.VITE_BILLING_PLAN_MANAGER_ADDRESS || '0xe6619e23b406BB7267bf56576018863E8b7BF4D0'
 const USDC_ADDRESS = import.meta.env.VITE_USDC_CONTRACT_ADDRESS || '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+
+// Debug contract addresses on component load
+console.log('=== CONTRACT ADDRESSES ===')
+console.log('BILLING_PLAN_MANAGER_ADDRESS:', BILLING_PLAN_MANAGER_ADDRESS)
+console.log('USDC_ADDRESS:', USDC_ADDRESS)
+console.log('Environment variables:', {
+  VITE_BILLING_PLAN_MANAGER_ADDRESS: import.meta.env.VITE_BILLING_PLAN_MANAGER_ADDRESS,
+  VITE_USDC_CONTRACT_ADDRESS: import.meta.env.VITE_USDC_CONTRACT_ADDRESS
+})
 
 interface BillingPlan {
   id: string
@@ -36,26 +46,22 @@ interface BillingPlan {
   created_at: string
 }
 
-interface SubscriptionPageProps {
-  privyWallet?: any | null;
-}
+interface SubscriptionPageProps {}
 
-export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet }) => {
+export const SubscriptionPage: React.FC<SubscriptionPageProps> = () => {
   const { planId } = useParams<{ planId: string }>()
   const navigate = useNavigate()
-  // Remove useSubscription context for address/provider
-  const address = privyWallet?.address || null;
-  // Use ethers.BrowserProvider for EIP-1193
+  const { ethereum, address, isConnected, connectWallet } = useWallet()
   const [provider, setProvider] = useState<any>(null);
 
   useEffect(() => {
-    if (privyWallet && privyWallet.getEip1193Provider) {
-      const ethersProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider());
+    if (ethereum && isConnected) {
+      const ethersProvider = new ethers.BrowserProvider(ethereum);
       setProvider(ethersProvider);
     } else {
       setProvider(null);
     }
-  }, [privyWallet]);
+  }, [ethereum, isConnected]);
 
   const [plan, setPlan] = useState<BillingPlan | null>(null)
   const [loading, setLoading] = useState(true)
@@ -157,21 +163,54 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet 
     try {
       setSubscribing(true)
       const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
+      // Use a larger allowance (common pattern in DeFi) - approve for multiple payments
+      const largeAllowance = ethers.parseUnits((plan.amount * 12).toString(), 6) // 12 payments worth
+      
+      console.log('Plan amount:', planAmount.toString())
+      console.log('Approving allowance:', largeAllowance.toString())
+      
       // Use BrowserProvider for EIP-1193
-      const browserProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider())
-      const signer = await browserProvider.getSigner()
+      const signer = await provider.getSigner()
       const usdcWithSigner = new ethers.Contract(USDC_ADDRESS, USDC_ABI, signer)
-      // Some USDC tokens require setting allowance to 0 before updating
+      
+      // Check current allowance first
       const currentAllowance = await usdcWithSigner.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      console.log('Current allowance before approval:', currentAllowance.toString())
+      
+      // Some USDC tokens require setting allowance to 0 before updating
       if (currentAllowance > 0n) {
+        console.log('Clearing existing allowance...')
         const tx0 = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, 0)
         await tx0.wait()
+        toast.success('Previous allowance cleared!')
+        
+        // Wait for state to update
+        await new Promise(resolve => setTimeout(resolve, 1000))
       }
-      const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, planAmount)
+      
+      // Approve the larger amount
+      console.log('Setting new allowance...')
+      const approveTx = await usdcWithSigner.approve(BILLING_PLAN_MANAGER_ADDRESS, largeAllowance)
+      toast.success('Approval transaction sent! Waiting for confirmation...')
       await approveTx.wait()
       toast.success('USDC approved!')
+      
+      // Wait longer for the blockchain state to update
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      
+      // Verify the allowance was set correctly
+      const newAllowance = await usdcWithSigner.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      console.log('New allowance after approval:', newAllowance.toString())
+      
+      if (newAllowance < planAmount) {
+        toast.error('Allowance was not set correctly. Please try again.')
+        return
+      }
+      
+      // Refresh allowance to confirm
       await checkAllowance()
     } catch (error: any) {
+      console.error('Approval error:', error)
       toast.error(error.message || 'USDC approval failed')
     } finally {
       setSubscribing(false)
@@ -182,42 +221,139 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet 
     if (!plan || !address || !planId || !provider) return
     try {
       setSubscribing(true)
-      // 1. Check USDC balance
-      const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
-      const balance = await usdc.balanceOf(address)
+      
+      // 1. Get plan amount and check balance
       const planAmount = ethers.parseUnits(plan.amount.toString(), 6)
-      if (balance < planAmount) {
-        toast.error('Insufficient USDC balance')
+      console.log('=== SUBSCRIPTION DEBUG INFO ===')
+      console.log('Plan amount from DB:', plan.amount)
+      console.log('Plan amount parsed (wei):', planAmount.toString())
+      console.log('Plan amount formatted:', ethers.formatUnits(planAmount, 6), 'USDC')
+      console.log('Wallet address:', address)
+      console.log('Plan ID:', planId)
+      
+      const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, provider)
+      const usdcBalance = await usdc.balanceOf(address)
+      console.log('USDC balance (wei):', usdcBalance.toString())
+      console.log('USDC balance (formatted):', ethers.formatUnits(usdcBalance, 6), 'USDC')
+      
+      if (usdcBalance < planAmount) {
+        toast.error(`Insufficient USDC balance. You have ${ethers.formatUnits(usdcBalance, 6)} USDC but need ${ethers.formatUnits(planAmount, 6)} USDC`)
         setSubscribing(false)
         return
       }
-      // 2. Check allowance (should be enough now)
-      if (allowance < planAmount) {
-        toast.error('Please approve USDC before subscribing.')
+      
+      // 2. Check allowance (most critical)
+      const currentAllowance = await usdc.allowance(address, BILLING_PLAN_MANAGER_ADDRESS)
+      console.log('Current allowance (wei):', currentAllowance.toString())
+      console.log('Current allowance (formatted):', ethers.formatUnits(currentAllowance, 6), 'USDC')
+      console.log('Required amount (wei):', planAmount.toString())
+      console.log('Required amount (formatted):', ethers.formatUnits(planAmount, 6), 'USDC')
+      console.log('Allowance sufficient?', currentAllowance >= planAmount)
+      console.log('BILLING_PLAN_MANAGER_ADDRESS:', BILLING_PLAN_MANAGER_ADDRESS)
+      console.log('USDC_ADDRESS:', USDC_ADDRESS)
+      
+      if (currentAllowance < planAmount) {
+        toast.error(`Insufficient allowance. Current: ${ethers.formatUnits(currentAllowance, 6)} USDC, Required: ${ethers.formatUnits(planAmount, 6)} USDC`)
+        // Refresh our local allowance state
+        await checkAllowance()
         setSubscribing(false)
         return
       }
-      // 3. Subscribe
-      const browserProvider = new ethers.BrowserProvider(privyWallet.getEip1193Provider())
-      const signer = await browserProvider.getSigner()
+      
+      // 3. Get on-chain plan data to compare (CRITICAL DEBUG STEP)
+      console.log('=== CHECKING ON-CHAIN PLAN DATA ===')
+      const contractWithoutSigner = new ethers.Contract(BILLING_PLAN_MANAGER_ADDRESS, BILLING_PLAN_MANAGER_ABI, provider)
+      
+      try {
+        const onChainPlan = await contractWithoutSigner.getPlan(planId)
+        console.log('On-chain plan data:')
+        console.log('- Plan ID:', onChainPlan.planId)
+        console.log('- Creator:', onChainPlan.creator)
+        console.log('- Name:', onChainPlan.name)
+        console.log('- Amount (wei):', onChainPlan.amount.toString())
+        console.log('- Amount (formatted):', ethers.formatUnits(onChainPlan.amount, 6), 'USDC')
+        console.log('- Recipient:', onChainPlan.recipientWallet)
+        console.log('- Is Active:', onChainPlan.isActive)
+        
+        // Compare DB amount vs on-chain amount
+        if (planAmount.toString() !== onChainPlan.amount.toString()) {
+          console.warn('⚠️  AMOUNT MISMATCH!')
+          console.warn('DB amount (parsed):', planAmount.toString())
+          console.warn('On-chain amount:', onChainPlan.amount.toString())
+          toast.error('Plan amount mismatch between database and blockchain. Please refresh and try again.')
+          setSubscribing(false)
+          return
+        }
+        
+        if (!onChainPlan.isActive) {
+          toast.error('This plan is no longer active on the blockchain.')
+          setSubscribing(false)
+          return
+        }
+        
+        // Re-check allowance against the on-chain amount
+        const onChainPlanAmount = onChainPlan.amount
+        console.log('=== FINAL ALLOWANCE CHECK WITH ON-CHAIN DATA ===')
+        console.log('On-chain plan amount:', onChainPlanAmount.toString())
+        console.log('Current allowance:', currentAllowance.toString())
+        console.log('Allowance sufficient for on-chain amount?', currentAllowance >= onChainPlanAmount)
+        
+        if (currentAllowance < onChainPlanAmount) {
+          toast.error(`Insufficient allowance for on-chain plan amount. Current: ${ethers.formatUnits(currentAllowance, 6)} USDC, On-chain requires: ${ethers.formatUnits(onChainPlanAmount, 6)} USDC`)
+          setSubscribing(false)
+          return
+        }
+        
+      } catch (planError) {
+        console.error('Could not fetch on-chain plan:', planError)
+        toast.error('Plan not found on blockchain. It may have been deleted.')
+        setSubscribing(false)
+        return
+      }
+      
+      // 4. Subscribe with more detailed logging
+      console.log('=== STARTING SUBSCRIPTION ===')
+      const signer = await provider.getSigner()
       const contractWithSigner = new ethers.Contract(BILLING_PLAN_MANAGER_ADDRESS, BILLING_PLAN_MANAGER_ABI, signer)
+      
+      // Try to estimate gas first to catch errors early
+      try {
+        const gasEstimate = await contractWithSigner.subscribe.estimateGas(planId)
+        console.log('Gas estimate:', gasEstimate.toString())
+      } catch (gasError: any) {
+        console.error('Gas estimation failed:', gasError)
+        console.error('Gas error details:', gasError.reason || gasError.message)
+        toast.error(`Transaction would fail: ${gasError.reason || gasError.message}`)
+        setSubscribing(false)
+        return
+      }
+      
+      toast.success('Subscription transaction sent! Waiting for confirmation...')
       const tx = await contractWithSigner.subscribe(planId)
+      console.log('Transaction hash:', tx.hash)
       await tx.wait()
-      // 4. Update backend (optional, if you want to record in DB)
+      
+      // 5. Update backend (optional, if you want to record in DB)
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/plan-subscriptions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planId, subscriberAddress: address, transactionHash: tx.hash })
       })
+      
       if (response.ok) {
         toast.success('Successfully subscribed to plan!')
         setIsAlreadySubscribed(true)
+        // Refresh allowance and balance
+        await checkAllowance()
+        await checkUsdcBalance()
       } else {
         const data = await response.json()
         toast.error(data.error || 'Failed to create subscription record')
       }
     } catch (error: any) {
-      toast.error(error.message || 'Failed to subscribe to plan')
+      console.error('Subscribe error:', error)
+      console.error('Error details:', error.reason || error.message)
+      toast.error(error.reason || error.message || 'Failed to subscribe to plan')
     } finally {
       setSubscribing(false)
     }
@@ -319,12 +455,21 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet 
           {isAlreadySubscribed ? (
             <Card className="mb-6 border-green-200 bg-green-50">
               <CardContent className="pt-6">
-                <div className="flex items-center space-x-3">
-                  <Check className="h-8 w-8 text-green-600" />
-                  <div>
-                    <h3 className="font-semibold text-green-900">Already Subscribed</h3>
-                    <p className="text-sm text-green-700">You're already subscribed to this plan</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Check className="h-8 w-8 text-green-600" />
+                    <div>
+                      <h3 className="font-semibold text-green-900">Already Subscribed</h3>
+                      <p className="text-sm text-green-700">You're already subscribed to this plan</p>
+                    </div>
                   </div>
+                  <Button
+                    onClick={() => navigate('/my-subscriptions')}
+                    variant="outline"
+                    className="border-green-300 text-green-700 hover:bg-green-100"
+                  >
+                    View All Subscriptions
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -339,7 +484,8 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet 
                     <p className="text-gray-600 mb-4">
                       Please connect your wallet to subscribe to this plan
                     </p>
-                    <Button onClick={() => navigate('/')} variant="outline">
+                    <Button onClick={connectWallet} variant="outline">
+                      <Wallet className="h-4 w-4 mr-2" />
                       Connect Wallet
                     </Button>
                   </div>
@@ -367,6 +513,27 @@ export const SubscriptionPage: React.FC<SubscriptionPageProps> = ({ privyWallet 
                     <div className="text-xs text-gray-500 text-center">
                       Allowance: {allowance?.toString()} | Required: {ethers.parseUnits(plan.amount.toString(), 6).toString()}
                     </div>
+                    
+                    {/* Manual USDC Approval Link
+                    <div className="text-xs text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-yellow-800 mb-2">
+                        <strong>Having trouble with approval?</strong>
+                      </p>
+                      <p className="text-yellow-700 mb-2">
+                        You can manually approve USDC on Base Explorer:
+                      </p>
+                      <a
+                        href={`https://basescan.org/address/${USDC_ADDRESS}#writeContract`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline hover:text-blue-800"
+                      >
+                        Open USDC Contract on BaseScan →
+                      </a>
+                      <p className="text-yellow-700 mt-2 text-xs">
+                        Use spender: <code className="bg-white px-1 rounded">{BILLING_PLAN_MANAGER_ADDRESS}</code>
+                      </p>
+                    </div> */}
                     {allowance < ethers.parseUnits(plan.amount.toString(), 6) ? (
                       <Button
                         onClick={handleApprove}

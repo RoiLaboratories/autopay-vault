@@ -9,7 +9,8 @@ import {
   DollarSign,
   Calendar,
   Wallet,
-  CreditCard
+  CreditCard,
+  PlayCircle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -172,10 +173,26 @@ export const BillingPlans: React.FC = () => {
 
   const handleEditPlan = async (planData: Omit<BillingPlan, 'id' | 'plan_id' | 'created_at' | 'creator_address' | 'is_active'>) => {
     if (!editingPlan) return
+    if (!provider) {
+      toast.error('Please connect your wallet before updating a plan.')
+      return
+    }
 
     try {
       setLoading(true)
 
+      // 1. Update plan on-chain first (just like in handleCreatePlan)
+      if (!provider) throw new Error('Wallet provider not found')
+      await billingPlanService.initialize(provider)
+      await billingPlanService.updatePlan(
+        editingPlan.plan_id,
+        planData.name,
+        planData.amount,
+        planData.recipient_wallet
+      )
+      toast.success('Plan updated on-chain!')
+
+      // 2. Then update plan in backend/database
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/billing-plans`, {
         method: 'PUT',
         headers: {
@@ -239,6 +256,57 @@ export const BillingPlans: React.FC = () => {
     } catch (error) {
       console.error('Error deleting plan:', error)
       toast.error('Failed to delete plan')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleProcessPayments = async (planId: string) => {
+    if (!provider) {
+      toast.error('Please connect your wallet to process payments.')
+      return
+    }
+
+    try {
+      setLoading(true)
+      
+      // Initialize billing service
+      await billingPlanService.initialize(provider)
+      
+      // Get plan subscriptions to check for due payments
+      const subscriptions = await billingPlanService.getPlanSubscriptions(planId)
+      
+      let processedCount = 0
+      let errorCount = 0
+      
+      for (const subscription of subscriptions) {
+        if (subscription.isActive) {
+          try {
+            // Check if payment is due (current time >= nextPaymentDue)
+            const currentTime = Math.floor(Date.now() / 1000)
+            if (currentTime >= Number(subscription.nextPaymentDue)) {
+              await billingPlanService.processPayment(planId, subscription.subscriber)
+              processedCount++
+              toast.success(`Payment processed for ${subscription.subscriber.slice(0, 6)}...`)
+            }
+          } catch (error) {
+            console.error(`Failed to process payment for ${subscription.subscriber}:`, error)
+            errorCount++
+          }
+        }
+      }
+      
+      if (processedCount > 0) {
+        toast.success(`Successfully processed ${processedCount} payment(s)!`)
+      } else if (errorCount > 0) {
+        toast.error(`Failed to process ${errorCount} payment(s). Check subscriber balances and allowances.`)
+      } else {
+        toast.success('No payments due at this time.')
+      }
+      
+    } catch (error) {
+      console.error('Error processing payments:', error)
+      toast.error('Failed to process payments')
     } finally {
       setLoading(false)
     }
@@ -371,6 +439,15 @@ export const BillingPlans: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       disabled={loading}
+                      onClick={() => handleProcessPayments(plan.plan_id)}
+                      title="Process due payments for this plan"
+                    >
+                      <PlayCircle className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={loading}
                       onClick={() => {
                         setEditingPlan(plan)
                         setIsModalOpen(true)
@@ -415,28 +492,44 @@ export const BillingPlans: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Subscription Link */}
-                  <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground mb-2">Subscription Link:</p>
-                  <div className="flex items-center space-x-2">
-                    <div className="flex-1 bg-muted rounded p-2 text-sm font-mono truncate">
-                      {plan.plan_id ? `${window.location.origin}/subscribe/${plan.plan_id}` : 'Loading...'}
+                {/* Subscription Link and Payment Management */}
+                <div className="pt-4 border-t space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Subscription Link:</p>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 bg-muted rounded p-2 text-sm font-mono truncate">
+                        {plan.plan_id ? `${window.location.origin}/subscribe/${plan.plan_id}` : 'Loading...'}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!plan.plan_id}
+                        onClick={() => handleCopyLink(plan.plan_id)}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!plan.plan_id}
+                        onClick={() => plan.plan_id && window.open(`${window.location.origin}/subscribe/${plan.plan_id}`, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
                     </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Payment Management:</p>
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled={!plan.plan_id}
-                      onClick={() => handleCopyLink(plan.plan_id)}
+                      disabled={!provider || loading}
+                      onClick={() => handleProcessPayments(plan.plan_id)}
+                      className="w-full"
                     >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={!plan.plan_id}
-                      onClick={() => plan.plan_id && window.open(`${window.location.origin}/subscribe/${plan.plan_id}`, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
+                      <PlayCircle className="w-4 h-4 mr-2" />
+                      Process Due Payments
                     </Button>
                   </div>
                 </div>
