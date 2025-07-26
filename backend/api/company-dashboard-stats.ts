@@ -8,7 +8,7 @@ const supabase = createClient(
 )
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS properly
+  // Handle CORS first, before any other logic
   const origin = req.headers.origin as string
   setCorsHeaders(res, origin)
   
@@ -23,12 +23,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     // Fetch all plans for the creator (optionally filter by creator address if provided)
     const { creatorAddress } = req.query
+    
+    console.log('Fetching stats for creator:', creatorAddress)
+    
     let plansQuery = supabase.from('billing_plans').select('id, plan_id, is_active, amount')
     if (creatorAddress) {
       plansQuery = plansQuery.eq('creator_address', creatorAddress)
     }
     const { data: plans, error: plansError } = await plansQuery
-    if (plansError) throw plansError
+    
+    if (plansError) {
+      console.error('Plans query error:', plansError)
+      throw new Error(`Plans query failed: ${plansError.message}`)
+    }
+
+    console.log('Found plans:', plans?.length || 0)
+
+    // Handle case where no plans exist
+    if (!plans || plans.length === 0) {
+      return res.status(200).json({
+        totalClients: 0,
+        activeClients: 0,
+        totalRevenue: 0,
+        totalSubscriptions: 0
+      })
+    }
 
     // Fetch all subscriptions for these plans
     const planIds = plans.map((p: any) => p.plan_id)
@@ -37,7 +56,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select('id, is_active, plan_id, subscriber_address')
       .in('plan_id', planIds)
     const { data: subscriptions, error: subsError } = await subsQuery
-    if (subsError) throw subsError
+    
+    if (subsError) {
+      console.error('Subscriptions query error:', subsError)
+      throw new Error(`Subscriptions query failed: ${subsError.message}`)
+    }
+
+    console.log('Found subscriptions:', subscriptions?.length || 0)
+    console.log('Found subscriptions:', subscriptions?.length || 0)
 
     // Create a plan lookup map for amounts
     const planLookup = plans.reduce((acc: any, plan: any) => {
@@ -46,18 +72,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }, {})
 
     // Calculate stats
-    const totalClients = new Set(subscriptions.map((s: any) => s.subscriber_address)).size
-    const activeClients = new Set(subscriptions.filter((s: any) => s.is_active).map((s: any) => s.subscriber_address)).size
+    const totalClients = new Set(subscriptions?.map((s: any) => s.subscriber_address) || []).size
+    const activeClients = new Set(subscriptions?.filter((s: any) => s.is_active).map((s: any) => s.subscriber_address) || []).size
     
     // Calculate total revenue based on plan amounts and active subscriptions
-    const totalRevenue = subscriptions
+    const totalRevenue = (subscriptions || [])
       .filter((s: any) => s.is_active)
       .reduce((sum: number, s: any) => {
         const plan = planLookup[s.plan_id]
         return sum + (plan ? parseFloat(plan.amount) : 0)
       }, 0)
     
-    const totalSubscriptions = subscriptions.length
+    const totalSubscriptions = subscriptions?.length || 0
 
     res.status(200).json({
       totalClients,
@@ -66,6 +92,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       totalSubscriptions
     })
   } catch (error: any) {
+    console.error('Dashboard stats error:', error)
+    setCorsHeaders(res, req.headers.origin as string) // Ensure CORS headers on error
     res.status(500).json({ error: error.message || 'Failed to fetch dashboard stats' })
   }
 }
