@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, Shield, Zap, Clock } from 'lucide-react'
+import { Shield, Zap, Users, CreditCard, BarChart3, Building2, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface LandingPageProps {
   onGetStarted: () => void
@@ -53,139 +54,163 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
             Your autonomous crypto subscription agent. Set it once, forget it forever.
           </motion.p>
 
-          {/* Feature Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8 }}
-            className="grid md:grid-cols-3 gap-6 mt-12 mb-12"
-          >
-            <motion.div
-              whileHover={{ 
-                scale: 1.05,
-                rotateY: 5,
-                z: 50
-              }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20 
-              }}
-              className="glass rounded-xl p-6 hover:bg-primary/10 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-            >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6 }}
-              />
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Clock className="w-8 h-8 text-primary mb-4 mx-auto" />
-              </motion.div>
-              <motion.h3 
-                className="text-lg font-semibold mb-2"
-                whileHover={{ y: -2 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                Automated Payments
-              </motion.h3>
-              <motion.p 
-                className="text-sm text-muted-foreground"
-                whileHover={{ y: -1 }}
-                transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
-              >
-                Schedule recurring crypto payments with precision timing
-              </motion.p>
-            </motion.div>
+          {/* AutoPay Vault Features */}
+          <Card className="relative overflow-hidden mt-12 mb-12">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/20 dark:to-indigo-950/20" />
+            <CardHeader className="relative">
+              <CardTitle className="flex items-center justify-center space-x-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                  className="w-6 h-6 bg-primary rounded-full flex items-center justify-center"
+                >
+                  <DollarSign className="w-4 h-4 text-white" />
+                </motion.div>
+                <span>AutoPay Vault Features</span>
+              </CardTitle>
+              <CardDescription className="text-center">Powerful tools for subscription management</CardDescription>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.1 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-green-200 dark:border-green-800 cursor-pointer hover:bg-green-50/50 dark:hover:bg-green-950/20 hover:border-green-300 dark:hover:border-green-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ rotate: 360 }}
+                      transition={{ duration: 0.5 }}
+                      className="w-8 h-8 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <CreditCard className="w-4 h-4 text-green-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Automated Payments</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Set up recurring USDC payments with smart contract automation for reliable subscription billing.
+                  </p>
+                </motion.div>
 
-            <motion.div
-              whileHover={{ 
-                scale: 1.05,
-                rotateY: -5,
-                z: 50
-              }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20 
-              }}
-              className="glass rounded-xl p-6 hover:bg-primary/10 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-            >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-              />
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: -5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
-              >
-                <Shield className="w-8 h-8 text-primary mb-4 mx-auto" />
-              </motion.div>
-              <motion.h3 
-                className="text-lg font-semibold mb-2"
-                whileHover={{ y: -2 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                Secure & Reliable
-              </motion.h3>
-              <motion.p 
-                className="text-sm text-muted-foreground"
-                whileHover={{ y: -1 }}
-                transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
-              >
-                Built with enterprise-grade security and fail-safe mechanisms
-              </motion.p>
-            </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.2 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-purple-200 dark:border-purple-800 cursor-pointer hover:bg-purple-50/50 dark:hover:bg-purple-950/20 hover:border-purple-300 dark:hover:border-purple-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.2 }}
+                      className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <Users className="w-4 h-4 text-purple-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Client Management</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Track subscriber activity, manage plans, and analyze revenue streams with comprehensive analytics.
+                  </p>
+                </motion.div>
 
-            <motion.div
-              whileHover={{ 
-                scale: 1.05,
-                rotateY: 5,
-                z: 50
-              }}
-              whileTap={{ scale: 0.95 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20 
-              }}
-              className="glass rounded-xl p-6 hover:bg-primary/10 transition-all duration-300 cursor-pointer group relative overflow-hidden"
-            >
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.3 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-orange-200 dark:border-orange-800 cursor-pointer hover:bg-orange-50/50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ 
+                        rotateY: 180,
+                        transition: { duration: 0.5 }
+                      }}
+                      className="w-8 h-8 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <BarChart3 className="w-4 h-4 text-orange-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Real-time Analytics</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Monitor subscription metrics, revenue trends, and client engagement with live dashboard updates.
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ 
+                    scale: 1.02, 
+                    y: -5,
+                    transition: { duration: 0.2 }
+                  }}
+                  transition={{ delay: 0.4 }}
+                  className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-lg border border-blue-200 dark:border-blue-800 cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-950/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors duration-200"
+                >
+                  <div className="flex items-center space-x-3 mb-2">
+                    <motion.div 
+                      whileHover={{ 
+                        scale: [1, 1.2, 1],
+                        transition: { duration: 0.3 }
+                      }}
+                      className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center"
+                    >
+                      <Building2 className="w-4 h-4 text-blue-600" />
+                    </motion.div>
+                    <h3 className="font-semibold">Enterprise Ready</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Built on Base blockchain with secure smart contracts and enterprise-grade reliability.
+                  </p>
+                </motion.div>
+              </div>
+              
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              />
-              <motion.div
-                whileHover={{ scale: 1.1, rotate: 5 }}
-                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 p-4 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-dashed border-blue-300 dark:border-blue-700"
               >
-                <Zap className="w-8 h-8 text-primary mb-4 mx-auto" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-blue-900 dark:text-blue-100">Ready to Get Started?</h4>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      Join the future of automated subscription billing
+                    </p>
+                  </div>
+                  <motion.div
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={onGetStarted}
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-950/30"
+                    >
+                      Get Started Now
+                    </Button>
+                  </motion.div>
+                </div>
               </motion.div>
-              <motion.h3 
-                className="text-lg font-semibold mb-2"
-                whileHover={{ y: -2 }}
-                transition={{ type: "spring", stiffness: 300 }}
-              >
-                Lightning Fast
-              </motion.h3>
-              <motion.p 
-                className="text-sm text-muted-foreground"
-                whileHover={{ y: -1 }}
-                transition={{ type: "spring", stiffness: 300, delay: 0.05 }}
-              >
-                Execute payments instantly when conditions are met
-              </motion.p>
-            </motion.div>
-          </motion.div>
+            </CardContent>
+          </Card>
 
           {/* CTA Button */}
           <motion.div
@@ -193,14 +218,14 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.8 }}
           >
-            <Button
+            {/* <Button
               onClick={onGetStarted}
               size="lg"
               className="text-lg px-8 py-4 group"
             >
               Get Started
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
+            </Button> */}
           </motion.div>
         </motion.div>
       </div>
