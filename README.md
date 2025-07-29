@@ -15,7 +15,7 @@ AutoPay Vault is a modern, automated crypto subscription service that allows use
 - **Autonomous Payments**: Automatically processes scheduled payments
 - **Multi-token Support**: ETH, USDC, USDT, and DAI
 - **Robust Error Handling**: Comprehensive logging and failure recovery
-- **Flexible Scheduling**: Daily, weekly, and monthly payment frequencies
+- **Flexible Scheduling**: Monthly and yearly payment frequencies
 - **Security First**: Enterprise-grade security with fail-safe mechanisms
 
 ## 🛠️ Tech Stack
@@ -133,7 +133,7 @@ CREATE TABLE payment_logs (
 ## 🚀 Usage
 
 1. **Connect Wallet**: Connect your Coinbase Wallet
-2. **Create Subscription**: Set recipient, amount, token, and frequency
+2. **Create Billing Plans**: Set recipient, amount and frequency
 3. **Monitor Dashboard**: Track active subscriptions and payment history  
 4. **Manage Subscriptions**: Pause, resume, or cancel subscriptions
 
